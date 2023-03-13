@@ -595,17 +595,17 @@ auto tuple_reduce(Tuple&& tuple, T&& init, Op&& op) {
   return __tuple_reduce<std::tuple_size_v<Tuple> - 1>((Tuple&&)tuple, (T&&)init, (Op&&)op);
 }
 
-template <typename... Ts> struct overloaded : Ts... { using Ts::operator()...; };
-template <typename... Ts> overloaded(Ts...) -> overloaded<Ts...>;
+template <auto I>
+using constant = std::integral_constant<decltype(I), I>;
 
-template <typename T, typename Enable = void>
-struct __optional_specialization : std::false_type {};
+template <typename T, template <typename...> class Primary>
+struct is_specialization_of : std::false_type {};
 
-template <typename T>
-struct __optional_specialization<std::optional<T>> : std::true_type {};
+template <template <typename...> class Primary, typename... Args>
+struct is_specialization_of<Primary<Args...>, Primary> : std::true_type {};
 
-template <typename T>
-concept optional_specialization = __optional_specialization<std::remove_cvref_t<T>>::value;
+template <typename T, template <typename...> class Primary>
+concept specialization_of = is_specialization_of<std::remove_cvref_t<T>, Primary>::value;
 
 template <typename T>
 struct __add_optional { using type = std::optional<T>; };
@@ -634,14 +634,14 @@ inline constexpr auto invoke_o = [] <typename F, typename T> (F&& f, T&& t)
                                       add_optional<std::invoke_result_t<F&&, remove_optional<T>>>
                                     > {
   if constexpr (std::same_as<std::invoke_result_t<F&&, remove_optional<T>>, void>) {
-    if constexpr (optional_specialization<T>) {
+    if constexpr (specialization_of<T, std::optional>) {
       if (t.has_value()) std::invoke((F&&)f, ((T&&)t).value());
     } else {
       std::invoke((F&&)f, (T&&)t);
     }
     return std::nullopt;
   } else {
-    if constexpr (optional_specialization<T>) {
+    if constexpr (specialization_of<T, std::optional>) {
       if (t.has_value()) return std::invoke((F&&)f, ((T&&)t).value());
       else return std::nullopt;
     } else {
@@ -657,7 +657,7 @@ inline constexpr auto transform_o = [] <typename F> (F&& f) {
 inline constexpr auto filter_o = [] <typename F> (F&& f) {
   return std::views::transform(
     [&] <typename T> (T&& t) -> add_optional<T> {
-      if constexpr (optional_specialization<T>) {
+      if constexpr (specialization_of<T, std::optional>) {
         if (t.has_value() && std::invoke((F&&)f, t.value())) return ((T&&)t).value();
         else return std::nullopt;
       } else {
@@ -680,7 +680,7 @@ template <typename MDSpace>
 inline constexpr std::ptrdiff_t mdrank = mdrank_t<std::remove_cvref_t<MDSpace>>::value;
 
 template <std::ptrdiff_t I, typename MDSpace, typename UnaryFunction, typename OuterTuple>
-void __mdfor(MDSpace&& space, UnaryFunction&& f, OuterTuple&& outer) {
+constexpr void __mdfor(MDSpace&& space, UnaryFunction&& f, OuterTuple&& outer) {
   if constexpr (I > 0) {
     BOOST_DEMAND_VECTORIZATION
     for (auto&& e: mdrange<I>(space, (OuterTuple&&)outer)) {
@@ -701,7 +701,7 @@ void __mdfor(MDSpace&& space, UnaryFunction&& f, OuterTuple&& outer) {
 }
 
 template <typename MDSpace, typename UnaryFunction>
-void mdfor(MDSpace&& space, UnaryFunction&& f) {
+constexpr void mdfor(MDSpace&& space, UnaryFunction&& f) {
   if constexpr (mdrank<MDSpace> > 0)
     __mdfor<mdrank<MDSpace> - 1>((MDSpace&&)space, (UnaryFunction&&)f, std::tuple<>{});
 }
@@ -743,6 +743,52 @@ public:
 
 template <typename Space, std::ptrdiff_t I, typename Factory>
 struct mdrank_t<__mdspace_binder<Space, I, Factory>> : mdrank_t<Space> {};
+
+template <typename Space, typename Factory>
+constexpr auto __mdspace_bind(Space&& space, Factory&& factory) {
+  using T = __mdspace_binder<
+    std::remove_cvref_t<Space>, 0, std::remove_cvref_t<Factory>
+  >;
+  return T((Space&&)space, (Factory&&)factory);
+}
+
+template <typename Index, typename Factory>
+struct __on_extent_factory {
+private:
+  static constexpr Index index{};
+  Factory underlying;
+
+public:
+  template <typename UFactory>
+  explicit constexpr __on_extent_factory(UFactory&& underlying_)
+    : underlying(underlying_) {}
+
+  constexpr __on_extent_factory(__on_extent_factory const&) = default;
+  constexpr __on_extent_factory(__on_extent_factory&&) = default;
+
+  template <typename Space, typename UFactory>
+    requires(specialization_of<UFactory, __on_extent_factory>)
+  friend constexpr auto __mdspace_bind(Space&& space, UFactory&& factory) {
+    using T = __mdspace_binder<
+      std::remove_cvref_t<Space>, UFactory::index, decltype(factory.underlying)
+    >;
+    return T((Space&&)space, ((UFactory&&)factory).underlying);
+  }
+};
+
+template <std::ptrdiff_t I, typename Space, typename Factory>
+constexpr auto on_extent(Space&& space, Factory&& factory) {
+  using T = __mdspace_binder<
+    std::remove_cvref_t<Space>, I, std::remove_cvref_t<Factory>
+  >;
+  return T((Space&&)space, (Factory&&)factory);
+}
+
+template <std::ptrdiff_t I, typename Factory>
+constexpr auto on_extent(Factory&& factory) {
+  using T = __on_extent_factory<constant<I>, std::remove_cvref_t<Factory>>;
+  return T((Factory&&)factory);
+}
 
 ///////////////////////////////////////////////////////////////////////////////////
 
@@ -873,14 +919,12 @@ public:
 
   template <typename Factory>
   friend constexpr auto operator|(extents space, Factory&& factory) {
-    using T = __mdspace_binder<extents, 0, std::remove_cvref_t<Factory>>;
-    return T(space, (Factory&&)factory);
+    return __mdspace_bind(space, (Factory&&)factory);
   }
 };
 
 template <std::ptrdiff_t M>
-struct mdrank_t<extents<M>>
-  : std::integral_constant<std::ptrdiff_t, M> {};
+struct mdrank_t<extents<M>> : std::integral_constant<std::ptrdiff_t, M> {};
 
 ///////////////////////////////////////////////////////////////////////////////////
 
@@ -1146,5 +1190,51 @@ void memset_diagonal_2d_mdfor_filter_o(
         })
     , [=] (auto i, auto j) {
         A[i + j * N] = 0.0;
+      });
+}
+
+void memset_diagonal_3d_reference(
+    index_type           N
+  , index_type           M
+  , index_type O
+  , double* __restrict__ A
+    ) noexcept
+{
+    BOOST_ASSUME((N % 32) == 0);
+    BOOST_ASSUME((M % 32) == 0);
+    BOOST_ASSUME_ALIGNED(A, 32);
+
+    BOOST_DEMAND_VECTORIZATION
+    for (index_type k = 0; k != O; ++k)
+        BOOST_DEMAND_VECTORIZATION
+        for (index_type j = 0; j != M; ++j)
+            BOOST_DEMAND_VECTORIZATION
+            for (index_type i = 0; i != N; ++i)
+                if (i == j) A[i + j * N + k * N * M] = 0.0;
+}
+
+void memset_plane_3d_mdfor_filter_o(
+    index_type N
+  , index_type M
+  , index_type O
+  , std::vector<double>& vA // TODO: Should be a span.
+    )
+{
+    double* __restrict__ A = vA.data();
+
+    BOOST_ASSUME((N % 32) == 0);
+    BOOST_ASSUME((M % 32) == 0);
+    BOOST_ASSUME((O % 32) == 0);
+    BOOST_ASSUME_ALIGNED(A, 32);
+
+    mdfor(
+      extents<3>(N, M, O)
+    | on_extent<1>(filter_o(
+        [] (auto idx) {
+          auto [i, j] = idx;
+          return i == j;
+        }))
+    , [=] (auto i, auto j, auto k) {
+        A[i + j * N + k * N * M] = 0.0;
       });
 }
