@@ -928,13 +928,6 @@ struct mdrank_t<extents<M>> : std::integral_constant<std::ptrdiff_t, M> {};
 
 ///////////////////////////////////////////////////////////////////////////////////
 
-#if !defined(__INTEL_COMPILER)
-#include <range/v3/view/cartesian_product.hpp>
-#include <range/v3/view/iota.hpp>
-#endif
-
-///////////////////////////////////////////////////////////////////////////////////
-
 #include <vector>
 #include <iterator>
 
@@ -1070,7 +1063,7 @@ void memset_2d_storage_iterator(
     }
 }
 
-#if !defined(__INTEL_COMPILER)
+#if 0 //!defined(__INTEL_COMPILER)
 void memset_2d_cartesian_product_iota(
     index_type N
   , index_type M
@@ -1085,8 +1078,8 @@ void memset_2d_cartesian_product_iota(
 
     BOOST_DEMAND_VECTORIZATION
     for (auto [i, j] : ranges::views::cartesian_product(
-                         ranges::views::iota(0, N)
-                       , ranges::views::iota(0, M)
+                         std::views::iota(0, N)
+                       , std::views::iota(0, M)
                        ))
         A[i + j * N] = 0.0;
 }
@@ -1238,3 +1231,5 @@ void memset_plane_3d_mdfor_filter_o(
         A[i + j * N + k * N * M] = 0.0;
       });
 }
+
+int main() {}
