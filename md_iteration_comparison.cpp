@@ -1,124 +1,4 @@
-// "Portable" Bryce-to-vectorizer communication facilities.
-// I never leave home without 'em!
-
-// BOOST_DETAIL_PP_STRINGIZE(expr) - Return expr as a string literal.
-#define BOOST_DETAIL_PP_STRINGIZE_(expr) #expr
-#define BOOST_DETAIL_PP_STRINGIZE(expr) BOOST_DETAIL_PP_STRINGIZE_(expr)
-
-// BOOST_PP_PRAGMA(args) - Emits a pragma.
-#define BOOST_PRAGMA(args) _Pragma(BOOST_DETAIL_PP_STRINGIZE(args))
-
-// BOOST_DEMAND_VECTORIZATION - Insist that the compiler disregard loop-carried
-// dependency analysis and cost modelling and vectorize the loop directly
-// following the macro. Using this incorrectly can silently cause bogus codegen
-// that blows up in unexpected ways. Usage:
-//
-// BOOST_DEMAND_VECTORIZATION for (/* ... */) { /* ... */ }
-//
-// NOTE: Unlike Clang and Intel, GCC doesn't have a stronger hint than ivdep,
-// so this is the best we can do. It is not clear if this overrides GCC's cost
-// modeling.
-#if   defined(__INTEL_COMPILER)
-    #define BOOST_DEMAND_VECTORIZATION                                         \
-        BOOST_PRAGMA(simd)                                                     \
-        /**/
-#elif defined(__clang__)
-    #define BOOST_DEMAND_VECTORIZATION                                         \
-        BOOST_PRAGMA(clang loop vectorize(enable) interleave(enable))          \
-        /**/
-#else
-    #define BOOST_DEMAND_VECTORIZATION                                         \
-        BOOST_PRAGMA(GCC ivdep)                                                \
-        /**/
-#endif
-
-// BOOST_PREVENT_VECTORIZATION - Tell the compiler to not vectorize a loop.
-// Usage:
-//
-// BOOST_PREVENT_VECTORIZATION for (/* ... */) { /* ... */ }
-//
-// NOTE: Unlike Clang and Intel, GCC doesn't seem to have a way to do this.
-#if   defined(__INTEL_COMPILER)
-    #define BOOST_PREVENT_VECTORIZATION                                        \
-        BOOST_PRAGMA(novector)                                                 \
-        /**/
-#elif defined(__clang__)
-    #define BOOST_PREVENT_VECTORIZATION                                        \
-        BOOST_PRAGMA(clang loop vectorize(disable) interleave(disable))        \
-        /**/
-#else
-    #define BOOST_PREVENT_VECTORIZATION                                        \
-                                                                               \
-        /**/
-#endif
-
-// Sometimes it is nice to check that our brash and bold claims are, in fact,
-// correct. Defining BOOST_CHECK_ASSUMPTIONS does that (e.g. assumption will be
-// asserted before they are assumed).
-#if defined(BOOST_CHECK_ASSUMPTIONS)
-    #include <cassert>
-    #include <stdint>
-    #define BOOST_ASSERT_ASSUMPTION(expr) assert(expr)
-#else
-    #define BOOST_ASSERT_ASSUMPTION(expr)
-#endif
-
-// BOOST_ASSUME(expr) - Tell the compiler to assume that expr is true.
-// Useful for telling the compiler that the trip count for a loop is division
-// by a unrolling/vectorizing-friendly number:
-//
-//   BOOST_ASSUME((N % 32) == 0); for (auto i = 0; i != N; ++i) /* ... */
-//
-// BOOST_ASSUME_ALIGNED(ptr, align) - Tell the compiler to
-// assume that ptr is aligned to align bytes. ptr must be an lvalue non-const
-// pointer.
-//
-// NOTE: These used to have ridiculous exponential-in-number-of-uses
-// compile-time costs with Clang/LLVM. For example, a 10k line project with
-// ~100 BOOST_ASSUME/BOOST_ASSUME_ALIGNED usages would take ~20
-// seconds to build with ICPC and ~5-10 minutes with Clang/LLVM. I believe the
-// issue has now been fixed, but you'll run into it with older versions.
-//
-// NOTE: To the best of my knowledge, ICPC's __assume_aligned() is an
-// assumption about the first argument, while Clang/GCC's
-// __builtin_assume_aligned() is an assumption about the return value of the
-// intrinsic.
-#if   defined(__INTEL_COMPILER)
-    #define BOOST_ASSUME(expr)                                                 \
-        BOOST_ASSERT_ASSUMPTION(expr)                                          \
-        __assume(expr)                                                         \
-        /**/
-    #define BOOST_ASSUME_ALIGNED(ptr, align)                                   \
-        BOOST_ASSERT_ASSUMPTION(0 == (std::uintptr_t(ptr) % alignment))        \
-        __assume_aligned(ptr, align)                                           \
-        /**/
-#elif defined(__clang__)
-    #define BOOST_ASSUME(expr)                                                 \
-        BOOST_ASSERT_ASSUMPTION(expr)                                          \
-        __builtin_assume(expr)                                                 \
-        /**/
-    #define BOOST_ASSUME_ALIGNED(ptr, align)                                   \
-        BOOST_ASSERT_ASSUMPTION(0 == (std::uintptr_t(ptr) % alignment))        \
-        {                                                                      \
-            ptr = reinterpret_cast<decltype(ptr)>(                             \
-                __builtin_assume_aligned(ptr, align)                           \
-            );                                                                 \
-        }                                                                      \
-        /**/
-#else // GCC
-    #define BOOST_ASSUME(expr)                                                 \
-        BOOST_ASSERT_ASSUMPTION(expr)                                          \
-        do { if (!(expr)) __builtin_unreachable(); } while (0)                 \
-        /**/
-    #define BOOST_ASSUME_ALIGNED(ptr, align)                                   \
-        BOOST_ASSERT_ASSUMPTION(0 == (std::uintptr_t(ptr) % alignment))        \
-        {                                                                      \
-            ptr = reinterpret_cast<decltype(ptr)>(                             \
-                __builtin_assume_aligned(ptr, align)                           \
-            );                                                                 \
-        }                                                                      \
-        /**/
-#endif
+#include <spaces/optimization_hints.hpp>
 
 ///////////////////////////////////////////////////////////////////////////////////
 
@@ -191,8 +71,8 @@ struct index_2d_iterator
 
     constexpr index_2d_iterator& operator++() noexcept
     {
-        BOOST_ASSUME(i.idx    >= 0);
-        BOOST_ASSUME(i.extent >  0);
+        SPACES_ASSUME(i.idx    >= 0);
+        SPACES_ASSUME(i.extent >  0);
 
         ++i.idx;                // Inner loop iteration-expression.
 
@@ -211,12 +91,12 @@ struct index_2d_iterator
       , index_2d_iterator const& r
         ) noexcept
     {
-        BOOST_ASSUME(l.i.idx    >= 0);
-        BOOST_ASSUME(r.i.idx    >= 0);
-        BOOST_ASSUME(l.j.idx    >= 0);
-        BOOST_ASSUME(r.j.idx    >= 0);
-        BOOST_ASSUME(l.i.extent >  0);
-        BOOST_ASSUME(l.j.extent >  0);
+        SPACES_ASSUME(l.i.idx    >= 0);
+        SPACES_ASSUME(r.i.idx    >= 0);
+        SPACES_ASSUME(l.j.idx    >= 0);
+        SPACES_ASSUME(r.j.idx    >= 0);
+        SPACES_ASSUME(l.i.extent >  0);
+        SPACES_ASSUME(l.j.extent >  0);
 
         return (l.j.idx - r.j.idx) * (l.i.extent) - (l.i.idx - r.i.idx);
     }
@@ -227,10 +107,10 @@ struct index_2d_iterator
       , sentinel r
         ) noexcept
     {
-        BOOST_ASSUME(l.i.idx    >= 0);
-        BOOST_ASSUME(l.j.idx    >= 0);
-        BOOST_ASSUME(l.i.extent >  0);
-        BOOST_ASSUME(r.nj       >  0);
+        SPACES_ASSUME(l.i.idx    >= 0);
+        SPACES_ASSUME(l.j.idx    >= 0);
+        SPACES_ASSUME(l.i.extent >  0);
+        SPACES_ASSUME(r.nj       >  0);
 
         return (l.j.idx - r.nj) * (l.i.extent) - (l.i.idx - l.i.extent);
     }
@@ -239,10 +119,10 @@ struct index_2d_iterator
       , index_2d_iterator const& l
         ) noexcept
     {
-        BOOST_ASSUME(l.i.idx    >= 0);
-        BOOST_ASSUME(l.j.idx    >= 0);
-        BOOST_ASSUME(l.i.extent >  0);
-        BOOST_ASSUME(r.nj       >  0);
+        SPACES_ASSUME(l.i.idx    >= 0);
+        SPACES_ASSUME(l.j.idx    >= 0);
+        SPACES_ASSUME(l.i.extent >  0);
+        SPACES_ASSUME(r.nj       >  0);
 
         return (r.nj - l.j.idx) * (l.i.extent) - (l.i.extent - l.i.idx);
     }
@@ -283,14 +163,14 @@ struct index_2d_iterator
     friend constexpr bool
     operator==(index_2d_iterator const& l, index_2d_iterator const& r) noexcept
     {
-        BOOST_ASSUME(l.i.idx    >= 0);
-        BOOST_ASSUME(r.i.idx    >= 0);
-        BOOST_ASSUME(l.j.idx    >= 0);
-        BOOST_ASSUME(r.j.idx    >= 0);
-        BOOST_ASSUME(l.i.extent >  0);
-        BOOST_ASSUME(r.i.extent >  0);
-        BOOST_ASSUME(l.j.extent >  0);
-        BOOST_ASSUME(r.j.extent >  0);
+        SPACES_ASSUME(l.i.idx    >= 0);
+        SPACES_ASSUME(r.i.idx    >= 0);
+        SPACES_ASSUME(l.j.idx    >= 0);
+        SPACES_ASSUME(r.j.idx    >= 0);
+        SPACES_ASSUME(l.i.extent >  0);
+        SPACES_ASSUME(r.i.extent >  0);
+        SPACES_ASSUME(l.j.extent >  0);
+        SPACES_ASSUME(r.j.extent >  0);
 
         return l.i.extent == r.i.extent && l.j.extent == r.j.extent
             && l.i.idx    == r.i.idx    && l.j.idx    == r.j.idx;
@@ -308,8 +188,8 @@ struct index_2d_iterator
       , sentinel r
         ) noexcept
     {
-        BOOST_ASSUME(l.j.idx >= 0);
-        BOOST_ASSUME(r.nj    >  0);
+        SPACES_ASSUME(l.j.idx >= 0);
+        SPACES_ASSUME(r.nj    >  0);
 
         return l.j.idx == r.nj;
     }
@@ -528,8 +408,8 @@ inline index_generator<1> generate_indices(
 {
     index_type const nilo = ni[0];
     index_type const nihi = ni[1];
-    BOOST_ASSUME(nilo >= 0);
-    BOOST_ASSUME(nihi >  nilo);
+    SPACES_ASSUME(nilo >= 0);
+    SPACES_ASSUME(nihi >  nilo);
     for (index_type i = nilo; i != nihi; ++i)
         co_yield position<1>(i);
 }
@@ -550,10 +430,10 @@ inline index_generator<2> generate_indices(
     index_type const nihi = ni[1];
     index_type const njlo = nj[0];
     index_type const njhi = nj[1];
-    BOOST_ASSUME(njlo >= 0);
-    BOOST_ASSUME(nilo >= 0);
-    BOOST_ASSUME(njhi >  njlo);
-    BOOST_ASSUME(nihi >  nilo);
+    SPACES_ASSUME(njlo >= 0);
+    SPACES_ASSUME(nilo >= 0);
+    SPACES_ASSUME(njhi >  njlo);
+    SPACES_ASSUME(nihi >  nilo);
     for (index_type j = njlo; j != njhi; ++j)
         for (index_type i = nilo; i != nihi; ++i)
             co_yield position<2>(i, j);
@@ -682,7 +562,7 @@ inline constexpr std::ptrdiff_t mdrank = mdrank_t<std::remove_cvref_t<MDSpace>>:
 template <std::ptrdiff_t I, typename MDSpace, typename UnaryFunction, typename OuterTuple>
 constexpr void __mdfor(MDSpace&& space, UnaryFunction&& f, OuterTuple&& outer) {
   if constexpr (I > 0) {
-    BOOST_DEMAND_VECTORIZATION
+    SPACES_DEMAND_VECTORIZATION
     for (auto&& e: mdrange<I>(space, (OuterTuple&&)outer)) {
       invoke_o(
         [&] (auto&& t) {
@@ -690,7 +570,7 @@ constexpr void __mdfor(MDSpace&& space, UnaryFunction&& f, OuterTuple&& outer) {
         }, std::forward<decltype(e)>(e));
     }
   } else {
-    BOOST_DEMAND_VECTORIZATION
+    SPACES_DEMAND_VECTORIZATION
     for (auto&& e: mdrange<I>((MDSpace&&)space, (OuterTuple&&)outer)) {
       invoke_o(
         [&] (auto&& t) {
@@ -937,13 +817,13 @@ void memset_2d_reference(
   , double* __restrict__ A
     ) noexcept
 {
-    BOOST_ASSUME((N % 32) == 0);
-    BOOST_ASSUME((M % 32) == 0);
-    BOOST_ASSUME_ALIGNED(A, 32);
+    SPACES_ASSUME((N % 32) == 0);
+    SPACES_ASSUME((M % 32) == 0);
+    SPACES_ASSUME_ALIGNED(A, 32);
 
-    BOOST_DEMAND_VECTORIZATION
+    SPACES_DEMAND_VECTORIZATION
     for (index_type j = 0; j != M; ++j)
-        BOOST_DEMAND_VECTORIZATION
+        SPACES_DEMAND_VECTORIZATION
         for (index_type i = 0; i != N; ++i)
             A[i + j * N] = 0.0;
 }
@@ -956,11 +836,11 @@ void memset_2d_index_forward_range_based_for_loop(
 {
     double* __restrict__ A = vA.data();
 
-    BOOST_ASSUME((N % 32) == 0);
-    BOOST_ASSUME((M % 32) == 0);
-    BOOST_ASSUME_ALIGNED(A, 32);
+    SPACES_ASSUME((N % 32) == 0);
+    SPACES_ASSUME((M % 32) == 0);
+    SPACES_ASSUME_ALIGNED(A, 32);
 
-    BOOST_DEMAND_VECTORIZATION
+    SPACES_DEMAND_VECTORIZATION
     for (auto pos : index_2d_iterator_sentinel_range(N, M))
         A[pos[0] + pos[1] * N] = 0.0;
 }
@@ -973,15 +853,15 @@ void memset_2d_index_forward_iterators(
 {
     double* __restrict__ A = vA.data();
 
-    BOOST_ASSUME((N % 32) == 0);
-    BOOST_ASSUME((M % 32) == 0);
-    BOOST_ASSUME_ALIGNED(A, 32);
+    SPACES_ASSUME((N % 32) == 0);
+    SPACES_ASSUME((M % 32) == 0);
+    SPACES_ASSUME_ALIGNED(A, 32);
 
     auto&& r   = index_2d_iterator_sentinel_range(N, M);
     auto first = r.begin();
     auto last  = r.end();
 
-    BOOST_DEMAND_VECTORIZATION
+    SPACES_DEMAND_VECTORIZATION
     for (; first != last; ++first)
     {
         auto pos = *first;
@@ -997,16 +877,16 @@ void memset_2d_index_random_access_iterators(
 {
     double* __restrict__ A = vA.data();
 
-    BOOST_ASSUME((N % 32) == 0);
-    BOOST_ASSUME((M % 32) == 0);
-    BOOST_ASSUME_ALIGNED(A, 32);
+    SPACES_ASSUME((N % 32) == 0);
+    SPACES_ASSUME((M % 32) == 0);
+    SPACES_ASSUME_ALIGNED(A, 32);
 
     auto&& r   = index_2d_iterator_sentinel_range(N, M);
     auto first = r.begin();
     auto last  = r.end();
 
     index_type dist = last - first;
-    BOOST_DEMAND_VECTORIZATION
+    SPACES_DEMAND_VECTORIZATION
     for (index_type d = 0; d < dist; ++d)
     {
         auto pos = first[d];
@@ -1022,16 +902,16 @@ void memset_2d_index_known_distance_iterators(
 {
     double* __restrict__ A = vA.data();
 
-    BOOST_ASSUME((N % 32) == 0);
-    BOOST_ASSUME((M % 32) == 0);
-    BOOST_ASSUME_ALIGNED(A, 32);
+    SPACES_ASSUME((N % 32) == 0);
+    SPACES_ASSUME((M % 32) == 0);
+    SPACES_ASSUME_ALIGNED(A, 32);
 
     auto&& r   = index_2d_iterator_sentinel_range(N, M);
     auto first = r.begin();
     auto last  = r.end();
 
     index_type dist = last - first;
-    BOOST_DEMAND_VECTORIZATION
+    SPACES_DEMAND_VECTORIZATION
     for (index_type d = 0; d < dist; ++d, ++first)
     {
         auto pos = *first;
@@ -1047,15 +927,15 @@ void memset_2d_storage_iterator(
 {
     double* __restrict__ A = vA.data();
 
-    BOOST_ASSUME((N % 32) == 0);
-    BOOST_ASSUME((M % 32) == 0);
-    BOOST_ASSUME_ALIGNED(A, 32);
+    SPACES_ASSUME((N % 32) == 0);
+    SPACES_ASSUME((M % 32) == 0);
+    SPACES_ASSUME_ALIGNED(A, 32);
 
     auto&& r   = storage_2d_range(N, M);
     auto first = r.begin();
     auto last  = r.end();
 
-    BOOST_DEMAND_VECTORIZATION
+    SPACES_DEMAND_VECTORIZATION
     for (; first != last; ++first)
     {
         auto pos = *first;
@@ -1072,11 +952,11 @@ void memset_2d_cartesian_product_iota(
 {
     double* __restrict__ A = vA.data();
 
-    BOOST_ASSUME((N % 32) == 0);
-    BOOST_ASSUME((M % 32) == 0);
-    BOOST_ASSUME_ALIGNED(A, 32);
+    SPACES_ASSUME((N % 32) == 0);
+    SPACES_ASSUME((M % 32) == 0);
+    SPACES_ASSUME_ALIGNED(A, 32);
 
-    BOOST_DEMAND_VECTORIZATION
+    SPACES_DEMAND_VECTORIZATION
     for (auto [i, j] : ranges::views::cartesian_product(
                          std::views::iota(0, N)
                        , std::views::iota(0, M)
@@ -1094,11 +974,11 @@ void memset_2d_index_generator(
 {
     double* __restrict__ A = vA.data();
 
-    BOOST_ASSUME((N % 32) == 0);
-    BOOST_ASSUME((M % 32) == 0);
-    BOOST_ASSUME_ALIGNED(A, 32);
+    SPACES_ASSUME((N % 32) == 0);
+    SPACES_ASSUME((M % 32) == 0);
+    SPACES_ASSUME_ALIGNED(A, 32);
 
-    BOOST_DEMAND_VECTORIZATION
+    SPACES_DEMAND_VECTORIZATION
     for (auto pos : generate_indices(N, M))
         A[pos[0] + pos[1] * N] = 0.0;
 }
@@ -1112,9 +992,9 @@ void memset_2d_mdfor(
 {
     double* __restrict__ A = vA.data();
 
-    BOOST_ASSUME((N % 32) == 0);
-    BOOST_ASSUME((M % 32) == 0);
-    BOOST_ASSUME_ALIGNED(A, 32);
+    SPACES_ASSUME((N % 32) == 0);
+    SPACES_ASSUME((M % 32) == 0);
+    SPACES_ASSUME_ALIGNED(A, 32);
 
     mdfor(extents<2>(N, M), [=] (auto i, auto j) {
       A[i + j * N] = 0.0;
@@ -1127,13 +1007,13 @@ void memset_diagonal_2d_reference(
   , double* __restrict__ A
     ) noexcept
 {
-    BOOST_ASSUME((N % 32) == 0);
-    BOOST_ASSUME((M % 32) == 0);
-    BOOST_ASSUME_ALIGNED(A, 32);
+    SPACES_ASSUME((N % 32) == 0);
+    SPACES_ASSUME((M % 32) == 0);
+    SPACES_ASSUME_ALIGNED(A, 32);
 
-    BOOST_DEMAND_VECTORIZATION
+    SPACES_DEMAND_VECTORIZATION
     for (index_type j = 0; j != M; ++j)
-        BOOST_DEMAND_VECTORIZATION
+        SPACES_DEMAND_VECTORIZATION
         for (index_type i = 0; i != N; ++i)
             if (i == j) A[i + j * N] = 0.0;
 }
@@ -1146,9 +1026,9 @@ void memset_diagonal_2d_mdfor_filter(
 {
     double* __restrict__ A = vA.data();
 
-    BOOST_ASSUME((N % 32) == 0);
-    BOOST_ASSUME((M % 32) == 0);
-    BOOST_ASSUME_ALIGNED(A, 32);
+    SPACES_ASSUME((N % 32) == 0);
+    SPACES_ASSUME((M % 32) == 0);
+    SPACES_ASSUME_ALIGNED(A, 32);
 
     mdfor(
       extents<2>(N, M)
@@ -1170,9 +1050,9 @@ void memset_diagonal_2d_mdfor_filter_o(
 {
     double* __restrict__ A = vA.data();
 
-    BOOST_ASSUME((N % 32) == 0);
-    BOOST_ASSUME((M % 32) == 0);
-    BOOST_ASSUME_ALIGNED(A, 32);
+    SPACES_ASSUME((N % 32) == 0);
+    SPACES_ASSUME((M % 32) == 0);
+    SPACES_ASSUME_ALIGNED(A, 32);
 
     mdfor(
       extents<2>(N, M)
@@ -1193,15 +1073,15 @@ void memset_diagonal_3d_reference(
   , double* __restrict__ A
     ) noexcept
 {
-    BOOST_ASSUME((N % 32) == 0);
-    BOOST_ASSUME((M % 32) == 0);
-    BOOST_ASSUME_ALIGNED(A, 32);
+    SPACES_ASSUME((N % 32) == 0);
+    SPACES_ASSUME((M % 32) == 0);
+    SPACES_ASSUME_ALIGNED(A, 32);
 
-    BOOST_DEMAND_VECTORIZATION
+    SPACES_DEMAND_VECTORIZATION
     for (index_type k = 0; k != O; ++k)
-        BOOST_DEMAND_VECTORIZATION
+        SPACES_DEMAND_VECTORIZATION
         for (index_type j = 0; j != M; ++j)
-            BOOST_DEMAND_VECTORIZATION
+            SPACES_DEMAND_VECTORIZATION
             for (index_type i = 0; i != N; ++i)
                 if (i == j) A[i + j * N + k * N * M] = 0.0;
 }
@@ -1215,10 +1095,10 @@ void memset_plane_3d_mdfor_filter_o(
 {
     double* __restrict__ A = vA.data();
 
-    BOOST_ASSUME((N % 32) == 0);
-    BOOST_ASSUME((M % 32) == 0);
-    BOOST_ASSUME((O % 32) == 0);
-    BOOST_ASSUME_ALIGNED(A, 32);
+    SPACES_ASSUME((N % 32) == 0);
+    SPACES_ASSUME((M % 32) == 0);
+    SPACES_ASSUME((O % 32) == 0);
+    SPACES_ASSUME_ALIGNED(A, 32);
 
     mdfor(
       extents<3>(N, M, O)

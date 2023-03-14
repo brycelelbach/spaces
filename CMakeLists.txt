@@ -13,6 +13,10 @@ set(SPACES_MARCH "native" CACHE STRING "Microarchitecture target (e.g. -march=).
 
 add_library(spaces INTERFACE)
 
+target_include_directories(spaces INTERFACE
+                           $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include/>
+                           $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>)
+
 target_compile_features(spaces INTERFACE cxx_std_20)
 
 target_compile_options(spaces INTERFACE
