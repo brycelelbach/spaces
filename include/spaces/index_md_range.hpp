@@ -15,6 +15,8 @@
 
 #pragma once
 
+#include <array>
+
 #include <spaces/config.hpp>
 
 SPACES_BEGIN_NAMESPACE
@@ -23,184 +25,157 @@ struct index_2d_range
 {
   struct sentinel
   {
-    constexpr sentinel(index_type nj_) noexcept : nj(nj_) {}
+    index_type const extent1;
 
-    index_type const nj;
+    constexpr sentinel(index_type extent1_) noexcept : extent1(extent1_) {}
   };
 
   struct iterator
   {
-    struct dimension
-    {
-      constexpr dimension() noexcept : extent(0), idx(0) {}
-
-      constexpr dimension(index_type extent_, index_type idx_) noexcept
-        : extent(extent_), idx(idx_)
-      {}
-
-      constexpr dimension(dimension const&) noexcept = default;
-      constexpr dimension(dimension&&)      noexcept = default;
-
-      index_type const extent;
-      index_type       idx;
-    };
-
-    constexpr iterator(dimension i_, dimension j_) noexcept
-      : i(i_), j(j_)
+    constexpr iterator(
+      std::array<index_type, 2> indices_
+    , std::array<index_type, 2> extents_
+    ) noexcept
+      : indices(indices_)
+      , extents{extents_}
     {}
 
     constexpr iterator& operator++() noexcept
     {
-        SPACES_ASSUME(i.idx    >= 0);
-        SPACES_ASSUME(i.extent >  0);
+      SPACES_ASSUME(indices[0] >= 0);
+      SPACES_ASSUME(extents[0] >  0);
 
-        ++i.idx;                // Inner loop iteration-expression.
+      ++indices[0];                 // Inner loop iteration-expression.
 
-        if (i.extent == i.idx)  // Inner loop condition.
-        {
-            ++j.idx;            // Outer loop increment.
-            i.idx = 0;          // Inner loop init-statement.
-        }
+      if (extents[0] == indices[0]) // Inner loop condition.
+      {
+        ++indices[1];               // Outer loop increment.
+        indices[0] = 0;             // Inner loop init-statement.
+      }
 
-        return *this;
+      return *this;
     }
 
     // NOTE: ICPC requires this when we use an iterator-sentinel range.
-    friend constexpr index_type operator-(
-        iterator const& l
-      , iterator const& r
-        ) noexcept
+    friend constexpr index_type
+    operator-(iterator const& l, iterator const& r) noexcept
     {
-        SPACES_ASSUME(l.i.idx    >= 0);
-        SPACES_ASSUME(r.i.idx    >= 0);
-        SPACES_ASSUME(l.j.idx    >= 0);
-        SPACES_ASSUME(r.j.idx    >= 0);
-        SPACES_ASSUME(l.i.extent >  0);
-        SPACES_ASSUME(l.j.extent >  0);
+      SPACES_ASSUME(l.indices[0] >= 0);
+      SPACES_ASSUME(r.indices[0] >= 0);
+      SPACES_ASSUME(l.indices[1] >= 0);
+      SPACES_ASSUME(r.indices[1] >= 0);
+      SPACES_ASSUME(l.extents[0] >  0);
+      SPACES_ASSUME(l.extents[1] >  0);
 
-        return (l.j.idx - r.j.idx) * (l.i.extent) - (l.i.idx - r.i.idx);
+      return (l.indices[1] - r.indices[1])
+          * (l.extents[0]) - (l.indices[0] - r.indices[0]);
     }
 
     // NOTE: ICPC requires this when we use an iterator-sentinel range.
-    friend constexpr index_type operator-(
-        iterator const& l
-      , sentinel r
-        ) noexcept
+    friend constexpr index_type
+    operator-(iterator const& l, sentinel r) noexcept
     {
-        SPACES_ASSUME(l.i.idx    >= 0);
-        SPACES_ASSUME(l.j.idx    >= 0);
-        SPACES_ASSUME(l.i.extent >  0);
-        SPACES_ASSUME(r.nj       >  0);
+      SPACES_ASSUME(l.indices[0] >= 0);
+      SPACES_ASSUME(l.indices[1] >= 0);
+      SPACES_ASSUME(l.extents[0] >  0);
+      SPACES_ASSUME(r.extent1    >  0);
 
-        return (l.j.idx - r.nj) * (l.i.extent) - (l.i.idx - l.i.extent);
+      return (l.indices[1] - r.extent1)
+           * (l.extents[0]) - (l.indices[0] - l.extents[0]);
     }
     friend constexpr index_type operator-(
         sentinel r
       , iterator const& l
         ) noexcept
     {
-        SPACES_ASSUME(l.i.idx    >= 0);
-        SPACES_ASSUME(l.j.idx    >= 0);
-        SPACES_ASSUME(l.i.extent >  0);
-        SPACES_ASSUME(r.nj       >  0);
+      SPACES_ASSUME(l.indices[0] >= 0);
+      SPACES_ASSUME(l.indices[1] >= 0);
+      SPACES_ASSUME(l.extents[0] >  0);
+      SPACES_ASSUME(r.extent1    >  0);
 
-        return (r.nj - l.j.idx) * (l.i.extent) - (l.i.extent - l.i.idx);
+      return (r.extent1 - l.indices[1])
+           * (l.extents[0]) - (l.extents[0] - l.indices[0]);
     }
 
-    friend constexpr iterator operator+(
-        iterator it
-      , index_type d
-        ) noexcept
+    friend constexpr iterator operator+(iterator it, index_type d) noexcept
     {
-        return iterator(
-          dimension(it.i.extent, it.i.idx + it.i.extent % d)
-        , dimension(it.j.extent, it.j.idx + d / it.i.extent)
-        );
+      return iterator(
+        {it.indices[0] + it.extents[0] % d, it.indices[1] + d / it.extents[0]},
+        {it.extents[0], it.extents[1]}
+      );
     }
 
     // NOTE: ICPC requires this when we use an iterator-sentinel range.
-    constexpr iterator& operator+=(
-        index_type d
-        ) noexcept
+    constexpr iterator& operator+=(index_type d) noexcept
     {
-        i.idx += i.extent % d;
-        j.idx += j.idx + d / i.extent;
-        return *this;
+      indices[0] += extents[0] % d;
+      indices[1] += indices[1] + d / extents[0];
+      return *this;
     }
 
-    constexpr position<2> operator[](
-        index_type d
-        ) noexcept
+    constexpr std::array<index_type, 2> operator[](index_type d) const noexcept
     {
-        return *(*this + d);
+      return *(*this + d);
     }
 
-    constexpr position<2> operator*() const noexcept
+    constexpr std::array<index_type, 2> operator*() const noexcept
     {
-        return position<2>(i.idx, j.idx);
+      return indices;
     }
 
     friend constexpr bool
     operator==(iterator const& l, iterator const& r) noexcept
     {
-        SPACES_ASSUME(l.i.idx    >= 0);
-        SPACES_ASSUME(r.i.idx    >= 0);
-        SPACES_ASSUME(l.j.idx    >= 0);
-        SPACES_ASSUME(r.j.idx    >= 0);
-        SPACES_ASSUME(l.i.extent >  0);
-        SPACES_ASSUME(r.i.extent >  0);
-        SPACES_ASSUME(l.j.extent >  0);
-        SPACES_ASSUME(r.j.extent >  0);
+      SPACES_ASSUME(l.indices[0] >= 0);
+      SPACES_ASSUME(r.indices[0] >= 0);
+      SPACES_ASSUME(l.indices[1] >= 0);
+      SPACES_ASSUME(r.indices[1] >= 0);
+      SPACES_ASSUME(l.extents[0] >  0);
+      SPACES_ASSUME(r.extents[0] >  0);
+      SPACES_ASSUME(l.extents[1] >  0);
+      SPACES_ASSUME(r.extents[1] >  0);
 
-        return l.i.extent == r.i.extent && l.j.extent == r.j.extent
-            && l.i.idx    == r.i.idx    && l.j.idx    == r.j.idx;
+      return l.extents[0] == r.extents[0] && l.extents[1] == r.extents[1]
+          && l.indices[0] == r.indices[0] && l.indices[1] == r.indices[1];
     }
-    friend constexpr bool operator!=(
-        iterator const& l
-      , iterator const& r
-        ) noexcept
+    friend constexpr bool operator!=(iterator const& l, iterator const& r) noexcept
     {
-        return !(l == r);
+      return !(l == r);
     }
 
-    friend constexpr bool operator==(
-        iterator const& l
-      , sentinel r
-        ) noexcept
+    friend constexpr bool operator==(iterator const& l, sentinel r) noexcept
     {
-        SPACES_ASSUME(l.j.idx >= 0);
-        SPACES_ASSUME(r.nj    >  0);
+      SPACES_ASSUME(l.indices[1] >= 0);
+      SPACES_ASSUME(r.extent1    >  0);
 
-        return l.j.idx == r.nj;
+      return l.indices[1] == r.extent1;
     }
-    friend constexpr bool operator!=(
-        iterator const& l
-      , sentinel r
-        ) noexcept
+    friend constexpr bool operator!=(iterator const& l, sentinel r) noexcept
     {
-        return !(l == r);
+      return !(l == r);
     }
 
   private:
-    dimension i;
-    dimension j;
+    std::array<index_type, 2> indices;
+    std::array<index_type, 2> const extents;
   };
 
-  constexpr index_2d_range(
-      index_type ni
-    , index_type nj
-      ) noexcept
-    : first(iterator(iterator::dimension(ni, 0), iterator::dimension(nj, 0)))
-    , last(nj)
+private:
+  iterator const first;
+  sentinel const last;
+
+public:
+  constexpr index_2d_range(index_type extent0, index_type extent1) noexcept
+    : first(
+        std::array<index_type, 2>{{0, 0}}
+      , std::array<index_type, 2>{{extent0, extent1}}
+      )
+    , last(extent1)
   {}
 
   constexpr iterator begin() const noexcept { return first; }
 
   constexpr sentinel end() const noexcept { return last; }
-
-private:
-  iterator first;
-  sentinel last;
 };
 
 SPACES_END_NAMESPACE
