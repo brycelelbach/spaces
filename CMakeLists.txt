@@ -33,6 +33,7 @@ target_compile_options(spaces INTERFACE
   >
   $<$<CXX_COMPILER_ID:Clang,AppleClang,Intel>:
     -Wno-pass-failed
+    -Wno-assume
   >
   $<$<CXX_COMPILER_ID:Clang,AppleClang,GNU,Intel>:
     -ftemplate-backtrace-limit=0
