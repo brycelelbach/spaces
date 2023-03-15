@@ -15,13 +15,21 @@
 
 #pragma once
 
+#include <cstddef>
+
 #include <spaces/preprocessor.hpp>
 
 #define SPACES_ABI_VERSION 0
 
 #define SPACES_BEGIN_NAMESPACE                                                \
-  namespace spaces { inline namespace SPACES_CAT(__v, SPACES_ABI_VERSION)     \
+  namespace spaces { inline namespace SPACES_CAT(__v, SPACES_ABI_VERSION) {   \
   /**/
 
 #define SPACES_END_NAMESPACE }}
+
+SPACES_BEGIN_NAMESPACE
+
+using index_type = std::ptrdiff_t;
+
+SPACES_END_NAMESPACE
 
