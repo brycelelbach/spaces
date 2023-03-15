@@ -15,9 +15,9 @@
 
 #pragma once
 
-#include <cstddef>
-
 #include <spaces/preprocessor.hpp>
+
+#include <cstddef>
 
 #define SPACES_ABI_VERSION 0
 
