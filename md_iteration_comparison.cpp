@@ -1,453 +1,9 @@
 #include <spaces/optimization_hints.hpp>
-
-///////////////////////////////////////////////////////////////////////////////////
-
-#include <array>
-#include <cstddef>
-
-using index_type = std::ptrdiff_t; // Signed 4 life.
-
-template <std::size_t N>
-struct position
-{
-    constexpr position() noexcept : idxs{{}} {}
-
-    template <typename... Indices>
-    constexpr explicit position(Indices... idxs_) noexcept
-      : idxs{{static_cast<index_type>(idxs_)...}}
-    {
-        static_assert(
-            sizeof...(Indices) == N
-          , "Insufficient index parameters passed to constructor."
-        );
-    }
-
-    constexpr position(position const&)            noexcept = default;
-    constexpr position(position&&)                 noexcept = default;
-    constexpr position& operator=(position const&) noexcept = default;
-    constexpr position& operator=(position&&)      noexcept = default;
-
-    constexpr index_type& operator[](index_type i) noexcept
-    {
-        return idxs[i];
-    }
-    constexpr index_type const& operator[](index_type i) const noexcept
-    {
-        return idxs[i];
-    }
-
-    std::array<index_type, N> idxs;
-};
-
-struct dimension
-{
-    constexpr dimension() noexcept : extent(0), idx(0) {}
-
-    constexpr dimension(index_type extent_, index_type idx_) noexcept
-      : extent(extent_), idx(idx_)
-    {}
-
-    constexpr dimension(dimension const&) noexcept = default;
-    constexpr dimension(dimension&&)      noexcept = default;
-
-    index_type const extent;
-    index_type       idx;
-};
-
-///////////////////////////////////////////////////////////////////////////////////
-
-struct index_2d_iterator
-{
-    struct sentinel
-    {
-        constexpr sentinel(index_type nj_) noexcept : nj(nj_) {}
-
-        index_type nj;
-    };
-
-    constexpr index_2d_iterator(dimension i_, dimension j_) noexcept
-      : i(i_), j(j_)
-    {}
-
-    constexpr index_2d_iterator& operator++() noexcept
-    {
-        SPACES_ASSUME(i.idx    >= 0);
-        SPACES_ASSUME(i.extent >  0);
-
-        ++i.idx;                // Inner loop iteration-expression.
-
-        if (i.extent == i.idx)  // Inner loop condition.
-        {
-            ++j.idx;            // Outer loop increment.
-            i.idx = 0;          // Inner loop init-statement.
-        }
-
-        return *this;
-    }
-
-    // NOTE: ICPC requires this when we use an iterator-sentinel range.
-    friend constexpr index_type operator-(
-        index_2d_iterator const& l
-      , index_2d_iterator const& r
-        ) noexcept
-    {
-        SPACES_ASSUME(l.i.idx    >= 0);
-        SPACES_ASSUME(r.i.idx    >= 0);
-        SPACES_ASSUME(l.j.idx    >= 0);
-        SPACES_ASSUME(r.j.idx    >= 0);
-        SPACES_ASSUME(l.i.extent >  0);
-        SPACES_ASSUME(l.j.extent >  0);
-
-        return (l.j.idx - r.j.idx) * (l.i.extent) - (l.i.idx - r.i.idx);
-    }
-
-    // NOTE: ICPC requires this when we use an iterator-sentinel range.
-    friend constexpr index_type operator-(
-        index_2d_iterator const& l
-      , sentinel r
-        ) noexcept
-    {
-        SPACES_ASSUME(l.i.idx    >= 0);
-        SPACES_ASSUME(l.j.idx    >= 0);
-        SPACES_ASSUME(l.i.extent >  0);
-        SPACES_ASSUME(r.nj       >  0);
-
-        return (l.j.idx - r.nj) * (l.i.extent) - (l.i.idx - l.i.extent);
-    }
-    friend constexpr index_type operator-(
-        sentinel r
-      , index_2d_iterator const& l
-        ) noexcept
-    {
-        SPACES_ASSUME(l.i.idx    >= 0);
-        SPACES_ASSUME(l.j.idx    >= 0);
-        SPACES_ASSUME(l.i.extent >  0);
-        SPACES_ASSUME(r.nj       >  0);
-
-        return (r.nj - l.j.idx) * (l.i.extent) - (l.i.extent - l.i.idx);
-    }
-
-    friend constexpr index_2d_iterator operator+(
-        index_2d_iterator it
-      , index_type d
-        ) noexcept
-    {
-        return index_2d_iterator(
-          dimension(it.i.extent, it.i.idx + it.i.extent % d)
-        , dimension(it.j.extent, it.j.idx + d / it.i.extent)
-        );
-    }
-
-    // NOTE: ICPC requires this when we use an iterator-sentinel range.
-    constexpr index_2d_iterator& operator+=(
-        index_type d
-        ) noexcept
-    {
-        i.idx += i.extent % d;
-        j.idx += j.idx + d / i.extent;
-        return *this;
-    }
-
-    constexpr position<2> operator[](
-        index_type d
-        ) noexcept
-    {
-        return *(*this + d);
-    }
-
-    constexpr position<2> operator*() const noexcept
-    {
-        return position<2>(i.idx, j.idx);
-    }
-
-    friend constexpr bool
-    operator==(index_2d_iterator const& l, index_2d_iterator const& r) noexcept
-    {
-        SPACES_ASSUME(l.i.idx    >= 0);
-        SPACES_ASSUME(r.i.idx    >= 0);
-        SPACES_ASSUME(l.j.idx    >= 0);
-        SPACES_ASSUME(r.j.idx    >= 0);
-        SPACES_ASSUME(l.i.extent >  0);
-        SPACES_ASSUME(r.i.extent >  0);
-        SPACES_ASSUME(l.j.extent >  0);
-        SPACES_ASSUME(r.j.extent >  0);
-
-        return l.i.extent == r.i.extent && l.j.extent == r.j.extent
-            && l.i.idx    == r.i.idx    && l.j.idx    == r.j.idx;
-    }
-    friend constexpr bool operator!=(
-        index_2d_iterator const& l
-      , index_2d_iterator const& r
-        ) noexcept
-    {
-        return !(l == r);
-    }
-
-    friend constexpr bool operator==(
-        index_2d_iterator const& l
-      , sentinel r
-        ) noexcept
-    {
-        SPACES_ASSUME(l.j.idx >= 0);
-        SPACES_ASSUME(r.nj    >  0);
-
-        return l.j.idx == r.nj;
-    }
-    friend constexpr bool operator!=(
-        index_2d_iterator const& l
-      , sentinel r
-        ) noexcept
-    {
-        return !(l == r);
-    }
-
-  private:
-    dimension i;
-    dimension j;
-};
-
-constexpr index_2d_iterator index_2d_iterator_begin(
-    index_type ni
-  , index_type nj
-    ) noexcept
-{
-    return index_2d_iterator(dimension(ni, 0), dimension(nj, 0));
-}
-
-constexpr index_2d_iterator index_2d_iterator_end(
-    index_type ni
-  , index_type nj
-    ) noexcept
-{
-    return index_2d_iterator(dimension(ni, 0), dimension(nj, nj));
-}
-
-struct index_2d_iterator_sentinel_range
-{
-    constexpr index_2d_iterator_sentinel_range(
-        index_type ni
-      , index_type nj
-        ) noexcept
-      : first(index_2d_iterator_begin(ni, nj)), last(nj)
-    {}
-
-    constexpr index_2d_iterator begin() const noexcept { return first; }
-
-    constexpr index_2d_iterator::sentinel end() const noexcept { return last; }
-
-  private:
-    index_2d_iterator first;
-    index_2d_iterator::sentinel last;
-};
-
-///////////////////////////////////////////////////////////////////////////////////
-
-struct storage_2d_iterator
-{
-  private:
-    index_type location;
-    std::array<index_type, 2> extents;
-
-  public:
-    storage_2d_iterator(
-      index_type location_
-    , std::array<index_type, 2> extents_
-    )
-      : location(location_), extents{extents_}
-    {}
-
-    auto& operator++()
-    {
-        ++location;
-        return *this;
-    }
-
-    auto operator*() const
-    {
-        return std::array{location % extents[1], location / extents[1]};
-    }
-
-    bool operator!=(storage_2d_iterator const& other)
-    {
-        return location != other.location
-            || extents[0] != other.extents[0]
-            || extents[1] != other.extents[1];
-    }
-};
-
-struct storage_2d_range {
-    storage_2d_range(
-        index_type ni
-      , index_type nj
-        )
-      : first(0, std::array<index_type, 2>{ni, nj})
-      , last(ni * nj, std::array<index_type, 2>{ni, nj})
-    {}
-
-    auto begin() const { return first; }
-
-     auto end() const { return last; }
-
-  private:
-    storage_2d_iterator first;
-    storage_2d_iterator last;
-};
-
-///////////////////////////////////////////////////////////////////////////////////
-
-#if !(defined(__INTEL_LLVM_COMPILER) || defined(__INTEL_COMPILER))
-
-#include <coroutine>
-
-template <std::size_t N>
-struct index_generator
-{
-    static_assert(N != 0, "N must be greater than 0.");
-
-    struct promise_type
-    {
-        using return_type = index_generator;
-
-        position<N> pos;
-
-        constexpr std::suspend_always yield_value(position<N> pos_)
-            noexcept
-        {
-            pos = pos_;
-            return {};
-        }
-
-        constexpr std::suspend_always initial_suspend() const
-            noexcept
-        {
-            return {};
-        }
-
-        constexpr std::suspend_always final_suspend() const
-            noexcept
-        {
-            return {};
-        }
-
-        index_generator get_return_object() noexcept
-        {
-            return index_generator(this);
-        }
-
-        constexpr void return_void() noexcept {}
-        constexpr void unhandled_exception() noexcept {}
-    };
-
-    struct iterator
-    {
-        std::coroutine_handle<promise_type> coro;
-        bool done;
-
-        constexpr iterator(
-            std::coroutine_handle<promise_type> coro_
-          , bool done_
-            )
-          : coro(coro_), done(done_)
-        {}
-
-        iterator& operator++()
-        {
-            coro.resume();
-            done = coro.done();
-            return *this;
-        }
-
-        position<N> operator*() const
-        {
-            return coro.promise().pos;
-        }
-
-        constexpr bool operator==(iterator const& rhs) const noexcept
-        {
-            return done == rhs.done;
-        }
-        constexpr bool operator!=(iterator const& rhs) const noexcept
-        {
-            return !(*this == rhs);
-        }
-    };
-
-    iterator begin()
-    {
-        p.resume();
-        return iterator(p, p.done());
-    }
-
-    constexpr iterator end()
-    {
-        return iterator(p, true);
-    }
-
-    constexpr index_generator(index_generator&& rhs) noexcept
-      : p(rhs.p)
-    {
-        rhs.p = nullptr;
-    }
-
-    ~index_generator()
-    {
-        if (p) p.destroy();
-    }
-
-  private:
-    explicit index_generator(promise_type* p) noexcept
-      : p(std::coroutine_handle<promise_type>::from_promise(*p))
-    {}
-
-    std::coroutine_handle<promise_type> p;
-};
-
-inline index_generator<1> generate_indices(
-    position<2> ni
-    ) noexcept
-{
-    index_type const nilo = ni[0];
-    index_type const nihi = ni[1];
-    SPACES_ASSUME(nilo >= 0);
-    SPACES_ASSUME(nihi >  nilo);
-    for (index_type i = nilo; i != nihi; ++i)
-        co_yield position<1>(i);
-}
-
-inline index_generator<1> generate_indices(
-    index_type ni
-    ) noexcept
-{
-    return generate_indices(position<2>{0, ni});
-}
-
-inline index_generator<2> generate_indices(
-    position<2> ni
-  , position<2> nj
-    ) noexcept
-{
-    index_type const nilo = ni[0];
-    index_type const nihi = ni[1];
-    index_type const njlo = nj[0];
-    index_type const njhi = nj[1];
-    SPACES_ASSUME(njlo >= 0);
-    SPACES_ASSUME(nilo >= 0);
-    SPACES_ASSUME(njhi >  njlo);
-    SPACES_ASSUME(nihi >  nilo);
-    for (index_type j = njlo; j != njhi; ++j)
-        for (index_type i = nilo; i != nihi; ++i)
-            co_yield position<2>(i, j);
-}
-
-inline index_generator<2> generate_indices(
-    index_type ni
-  , index_type nj
-    ) noexcept
-{
-    return generate_indices(position<2>{0, ni}, position<2>{0, nj});
-}
-
-#endif
+#include <spaces/index_md_range.hpp>
+#include <spaces/storage_md_range.hpp>
+#include <spaces/index_generator.hpp>
+
+using spaces::index_type;
 
 ///////////////////////////////////////////////////////////////////////////////////
 
@@ -841,7 +397,7 @@ void memset_2d_index_forward_range_based_for_loop(
     SPACES_ASSUME_ALIGNED(A, 32);
 
     SPACES_DEMAND_VECTORIZATION
-    for (auto pos : index_2d_iterator_sentinel_range(N, M))
+    for (auto pos : spaces::index_2d_range(N, M))
         A[pos[0] + pos[1] * N] = 0.0;
 }
 
@@ -857,7 +413,7 @@ void memset_2d_index_forward_iterators(
     SPACES_ASSUME((M % 32) == 0);
     SPACES_ASSUME_ALIGNED(A, 32);
 
-    auto&& r   = index_2d_iterator_sentinel_range(N, M);
+    auto&& r   = spaces::index_2d_range(N, M);
     auto first = r.begin();
     auto last  = r.end();
 
@@ -881,7 +437,7 @@ void memset_2d_index_random_access_iterators(
     SPACES_ASSUME((M % 32) == 0);
     SPACES_ASSUME_ALIGNED(A, 32);
 
-    auto&& r   = index_2d_iterator_sentinel_range(N, M);
+    auto&& r   = spaces::index_2d_range(N, M);
     auto first = r.begin();
     auto last  = r.end();
 
@@ -906,7 +462,7 @@ void memset_2d_index_known_distance_iterators(
     SPACES_ASSUME((M % 32) == 0);
     SPACES_ASSUME_ALIGNED(A, 32);
 
-    auto&& r   = index_2d_iterator_sentinel_range(N, M);
+    auto&& r   = spaces::index_2d_range(N, M);
     auto first = r.begin();
     auto last  = r.end();
 
@@ -931,7 +487,7 @@ void memset_2d_storage_iterator(
     SPACES_ASSUME((M % 32) == 0);
     SPACES_ASSUME_ALIGNED(A, 32);
 
-    auto&& r   = storage_2d_range(N, M);
+    auto&& r   = spaces::storage_2d_range(N, M);
     auto first = r.begin();
     auto last  = r.end();
 
@@ -979,7 +535,7 @@ void memset_2d_index_generator(
     SPACES_ASSUME_ALIGNED(A, 32);
 
     SPACES_DEMAND_VECTORIZATION
-    for (auto pos : generate_indices(N, M))
+    for (auto pos : spaces::generate_indices(N, M))
         A[pos[0] + pos[1] * N] = 0.0;
 }
 #endif
