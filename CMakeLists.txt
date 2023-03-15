@@ -31,11 +31,19 @@ target_compile_options(spaces INTERFACE
   $<$<CXX_COMPILER_ID:Clang,AppleClang,GNU,Intel,NVHPC>:
     -Wall
   >
+  $<$<CXX_COMPILER_ID:Clang,AppleClang,Intel>:
+    -Wno-pass-failed
+  >
   $<$<CXX_COMPILER_ID:Clang,AppleClang,GNU,Intel>:
     -ftemplate-backtrace-limit=0
     -march=${SPACES_MARCH}
   >
-  $<$<CXX_COMPILER_ID:Clang,AppleClang,GNU,Intel>:
+)
+
+add_library(spaces_optimization_report INTERFACE)
+
+target_compile_options(spaces_optimization_report INTERFACE
+  $<$<CXX_COMPILER_ID:Clang,AppleClang,Intel>:
     -Rpass=loop-vectorize
     -Rpass-missed=loop-vectorize
     -Rpass-analysis=loop-vectorize
@@ -45,4 +53,14 @@ target_compile_options(spaces INTERFACE
 
 add_executable(md_iteration_comparison md_iteration_comparison.cpp)
 target_link_libraries(md_iteration_comparison PRIVATE spaces)
+
+if (CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
+  add_library(md_iteration_comparison_optimization_report STATIC md_iteration_comparison.cpp)
+  target_link_libraries(md_iteration_comparison_optimization_report PRIVATE spaces spaces_optimization_report)
+  set(SPACES_THIS_BINARY_DIR ${CMAKE_CURRENT_BINARY_DIR}/CMakeFiles/md_iteration_comparison_optimization_report.dir)
+  configure_file(${CMAKE_CURRENT_SOURCE_DIR}/redirect_compiler_output.bash.in
+                 ${SPACES_THIS_BINARY_DIR}/redirect_compiler_output.bash)
+  set_target_properties(md_iteration_comparison_optimization_report PROPERTIES
+    CXX_COMPILER_LAUNCHER ${SPACES_THIS_BINARY_DIR}/redirect_compiler_output.bash)
+endif()
 
