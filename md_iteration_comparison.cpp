@@ -2,8 +2,10 @@
 #include <spaces/index_md_range.hpp>
 #include <spaces/storage_md_range.hpp>
 #include <spaces/index_generator.hpp>
+#include <spaces/views.hpp>
+#include <spaces/meta.hpp>
 
-using spaces::index_type;
+using namespace spaces;
 
 ///////////////////////////////////////////////////////////////////////////////////
 
@@ -12,97 +14,6 @@ using spaces::index_type;
 #include <optional>
 #include <array>
 #include <ranges>
-
-template <std::ptrdiff_t I, typename Tuple, typename T, typename Op>
-auto __tuple_reduce(Tuple&& tuple, T&& init, Op&& op) {
-  if constexpr (I > 0) {
-    return std::invoke(op,
-                       std::get<I>(tuple),
-                       __tuple_reduce<I - 1>((Tuple&&)tuple, (T&&)init, (Op&&)op));
-  } else {
-    return std::invoke((Op&&)op,
-                       (T&&)init,
-                       std::get<I>((Tuple&&)tuple));
-  }
-}
-
-template <typename Tuple, typename T, typename Op>
-auto tuple_reduce(Tuple&& tuple, T&& init, Op&& op) {
-  return __tuple_reduce<std::tuple_size_v<Tuple> - 1>((Tuple&&)tuple, (T&&)init, (Op&&)op);
-}
-
-template <auto I>
-using constant = std::integral_constant<decltype(I), I>;
-
-template <typename T, template <typename...> class Primary>
-struct is_specialization_of : std::false_type {};
-
-template <template <typename...> class Primary, typename... Args>
-struct is_specialization_of<Primary<Args...>, Primary> : std::true_type {};
-
-template <typename T, template <typename...> class Primary>
-concept specialization_of = is_specialization_of<std::remove_cvref_t<T>, Primary>::value;
-
-template <typename T>
-struct __add_optional { using type = std::optional<T>; };
-
-template <typename T>
-struct __add_optional<std::optional<T>> { using type = std::optional<T>; };
-
-template <typename T>
-using add_optional = __add_optional<T>::type;
-
-template <typename T>
-struct __remove_optional { using type = T; };
-
-template <typename T>
-struct __remove_optional<std::optional<T>> { using type = T; };
-
-template <typename T>
-using remove_optional = __remove_optional<T>::type;
-
-///////////////////////////////////////////////////////////////////////////////////
-
-inline constexpr auto invoke_o = [] <typename F, typename T> (F&& f, T&& t)
-                                 -> std::conditional_t<
-                                      std::same_as<std::invoke_result_t<F&&, remove_optional<T>>, void>,
-                                      std::nullopt_t,
-                                      add_optional<std::invoke_result_t<F&&, remove_optional<T>>>
-                                    > {
-  if constexpr (std::same_as<std::invoke_result_t<F&&, remove_optional<T>>, void>) {
-    if constexpr (specialization_of<T, std::optional>) {
-      if (t.has_value()) std::invoke((F&&)f, ((T&&)t).value());
-    } else {
-      std::invoke((F&&)f, (T&&)t);
-    }
-    return std::nullopt;
-  } else {
-    if constexpr (specialization_of<T, std::optional>) {
-      if (t.has_value()) return std::invoke((F&&)f, ((T&&)t).value());
-      else return std::nullopt;
-    } else {
-      return std::invoke((F&&)f, (T&&)t);
-    }
-  }
-};
-
-inline constexpr auto transform_o = [] <typename F> (F&& f) {
-  return std::views::transform(invoke_o);
-};
-
-inline constexpr auto filter_o = [] <typename F> (F&& f) {
-  return std::views::transform(
-    [&] <typename T> (T&& t) -> add_optional<T> {
-      if constexpr (specialization_of<T, std::optional>) {
-        if (t.has_value() && std::invoke((F&&)f, t.value())) return ((T&&)t).value();
-        else return std::nullopt;
-      } else {
-        if (std::invoke((F&&)f, t)) return (T&&)t;
-        else return std::nullopt;
-      }
-    }
-  );
-};
 
 ///////////////////////////////////////////////////////////////////////////////////
 
