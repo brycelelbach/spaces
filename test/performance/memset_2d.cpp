@@ -11,12 +11,53 @@
 #include <spaces/test.hpp>
 
 #include <cassert>
+#include <functional>
 
 extern void memset_2d_reference(
   double* __restrict__ A
 , spaces::index_type N
 , spaces::index_type M
   ) noexcept;
+
+extern void memset_2d_mdspan_raw_loop(
+  spaces::mdspan<double, spaces::dextents<2>> A
+  ) noexcept;
+
+extern void memset_2d_index_range_based_for_loop(
+  spaces::mdspan<double, spaces::dextents<2>> A
+  ) noexcept;
+
+extern void memset_2d_index_range_based_for_loop(
+  spaces::mdspan<double, spaces::dextents<2>> A
+  ) noexcept;
+
+extern void memset_2d_index_forward_iterators(
+  spaces::mdspan<double, spaces::dextents<2>> A
+  ) noexcept;
+
+extern void memset_2d_index_random_access_iterators(
+  spaces::mdspan<double, spaces::dextents<2>> A
+  ) noexcept;
+
+extern void memset_2d_index_known_distance_iterators(
+  spaces::mdspan<double, spaces::dextents<2>> A
+  ) noexcept;
+
+extern void memset_2d_storage_range_based_for_loop(
+  spaces::mdspan<double, spaces::dextents<2>> A
+  ) noexcept;
+
+extern void memset_2d_cartesian_product_iota(
+  spaces::mdspan<double, spaces::dextents<2>> A
+  ) noexcept;
+
+extern void memset_2d_index_generator(
+  spaces::mdspan<double, spaces::dextents<2>> A
+  );
+
+extern void memset_2d_space_based_for_each(
+  spaces::mdspan<double, spaces::dextents<2>> A
+  );
 
 void set_to_initial_state(spaces::mdspan<double, spaces::dextents<2>> A) {
   for (spaces::index_type j = 0; j != A.extent(1); ++j)
@@ -39,6 +80,42 @@ int main() {
 
   set_to_initial_state(A);
   memset_2d_reference(A.data_handle(), A.extent(0), A.extent(1));
+  validate_state(A);
+
+  set_to_initial_state(A);
+  memset_2d_mdspan_raw_loop(A);
+  validate_state(A);
+
+  set_to_initial_state(A);
+  memset_2d_index_range_based_for_loop(A);
+  validate_state(A);
+
+  set_to_initial_state(A);
+  memset_2d_index_forward_iterators(A);
+  validate_state(A);
+
+  set_to_initial_state(A);
+  memset_2d_index_random_access_iterators(A);
+  validate_state(A);
+
+  set_to_initial_state(A);
+  memset_2d_index_known_distance_iterators(A);
+  validate_state(A);
+
+  set_to_initial_state(A);
+  memset_2d_storage_range_based_for_loop(A);
+  validate_state(A);
+
+  set_to_initial_state(A);
+  memset_2d_cartesian_product_iota(A);
+  validate_state(A);
+
+  set_to_initial_state(A);
+  memset_2d_index_generator(A);
+  validate_state(A);
+
+  set_to_initial_state(A);
+  memset_2d_space_based_for_each(A);
   validate_state(A);
 
   return spaces::test_report_errors();
