@@ -52,8 +52,9 @@ public:
   template <typename... Outer>
   struct range<std::tuple<Outer...>>
   {
-    struct iterator : std::forward_iterator_tag
+    struct iterator
     {
+      using iterator_category = std::forward_iterator_tag;
       using value_type = std::tuple<index_type, Outer...>;
       using difference_type = index_type;
 
