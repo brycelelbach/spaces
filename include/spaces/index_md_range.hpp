@@ -15,9 +15,10 @@
 
 #pragma once
 
-#include <array>
-
 #include <spaces/config.hpp>
+#include <spaces/optimization_hints.hpp>
+
+#include <array>
 
 SPACES_BEGIN_NAMESPACE
 
