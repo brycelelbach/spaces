@@ -41,6 +41,7 @@ target_compile_options(spaces INTERFACE
   >
   $<$<CXX_COMPILER_ID:Clang,AppleClang,GNU,Intel,NVHPC>:
     -Wall
+    -fno-builtin
   >
   $<$<CXX_COMPILER_ID:Clang,AppleClang,Intel>:
     -Wno-pass-failed
