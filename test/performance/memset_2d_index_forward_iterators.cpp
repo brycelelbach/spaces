@@ -10,7 +10,7 @@
 #include <spaces/index_md_range.hpp>
 
 void memset_2d_index_forward_iterators(
-  spaces::mdspan<double, spaces::dextents<2>> A
+  spaces::mdspan<double, spaces::dextents<2>, spaces::layout_left> A
   ) noexcept
 {
   auto&& r   = spaces::index_2d_range(A.extent(0), A.extent(1));

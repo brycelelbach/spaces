@@ -9,7 +9,7 @@
 #include <spaces/mdspan.hpp>
 
 void memset_2d_mdspan_raw_loop(
-  spaces::mdspan<double, spaces::dextents<2>> A
+  spaces::mdspan<double, spaces::dextents<2>, spaces::layout_left> A
   ) noexcept
 {
   for (spaces::index_type j = 0; j != A.extent(1); ++j)

@@ -11,7 +11,7 @@
 #include <spaces/for_each.hpp>
 
 void memset_2d_space_based_for_each(
-  spaces::mdspan<double, spaces::dextents<2>> A
+  spaces::mdspan<double, spaces::dextents<2>, spaces::layout_left> A
   ) noexcept
 {
   spaces::for_each(

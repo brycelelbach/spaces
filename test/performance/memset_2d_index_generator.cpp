@@ -10,7 +10,7 @@
 #include <spaces/index_generator.hpp>
 
 void memset_2d_index_generator(
-  spaces::mdspan<double, spaces::dextents<2>> A
+  spaces::mdspan<double, spaces::dextents<2>, spaces::layout_left> A
   )
 {
   for (auto pos : spaces::generate_indices(A.extent(0), A.extent(1)))

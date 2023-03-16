@@ -5700,6 +5700,9 @@ private:
 SPACES_BEGIN_NAMESPACE
 
 using std::experimental::mdspan;
+using std::experimental::layout_left;
+using std::experimental::layout_right;
+using std::experimental::layout_stride;
 using std::experimental::extents;
 
 template <size_t Rank>

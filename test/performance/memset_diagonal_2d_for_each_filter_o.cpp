@@ -12,7 +12,7 @@
 #include <spaces/views.hpp>
 
 void memset_diagonal_2d_for_each_filter_o(
-  spaces::mdspan<double, spaces::dextents<2>> A
+  spaces::mdspan<double, spaces::dextents<2>, spaces::layout_left> A
   ) noexcept
 {
   spaces::for_each(

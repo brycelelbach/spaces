@@ -12,7 +12,7 @@
 #include <ranges>
 
 void memset_2d_cartesian_product_iota(
-  spaces::mdspan<double, spaces::dextents<2>> A
+  spaces::mdspan<double, spaces::dextents<2>, spaces::layout_left> A
   ) noexcept
 {
   auto indices =

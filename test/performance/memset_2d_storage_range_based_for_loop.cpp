@@ -10,7 +10,7 @@
 #include <spaces/storage_md_range.hpp>
 
 void memset_2d_storage_range_based_for_loop(
-  spaces::mdspan<double, spaces::dextents<2>> A
+  spaces::mdspan<double, spaces::dextents<2>, spaces::layout_left> A
   ) noexcept
 {
   for (auto pos : spaces::storage_2d_range(A.extent(0), A.extent(1)))
