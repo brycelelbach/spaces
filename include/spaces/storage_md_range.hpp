@@ -37,7 +37,7 @@ struct storage_2d_range
 
     constexpr std::array<index_type, 2> operator*() const noexcept
     {
-      return std::array{location % extents[1], location / extents[1]};
+      return std::array{location % extents[0], location / extents[0]};
     }
 
     constexpr bool operator!=(iterator const& other) noexcept
@@ -57,7 +57,7 @@ public:
       index_type ni
     , index_type nj
       ) noexcept
-    : first(0, std::array<index_type, 2>{ni, nj})
+    : first(index_type(0), std::array<index_type, 2>{ni, nj})
     , last(ni * nj, std::array<index_type, 2>{ni, nj})
   {}
 

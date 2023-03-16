@@ -92,8 +92,9 @@ struct index_2d_range
 
     friend constexpr iterator operator+(iterator it, index_type d) noexcept
     {
+      if (d == 0) return it;
       return iterator(
-        {it.indices[0] + it.extents[0] % d, it.indices[1] + d / it.extents[0]},
+        {it.indices[0] + d % it.extents[0], it.indices[1] + d / it.extents[0]},
         {it.extents[0], it.extents[1]}
       );
     }
@@ -101,8 +102,10 @@ struct index_2d_range
     // NOTE: ICPC requires this when we use an iterator-sentinel range.
     constexpr iterator& operator+=(index_type d) noexcept
     {
-      indices[0] += extents[0] % d;
-      indices[1] += indices[1] + d / extents[0];
+      if (d != 0) {
+        indices[0] += d % extents[0];
+        indices[1] += indices[1] + d / extents[0];
+      }
       return *this;
     }
 
