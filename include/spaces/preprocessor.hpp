@@ -26,3 +26,11 @@
 // SPACES_PP_PRAGMA(args) - Emits the pragma `args`.
 #define SPACES_PRAGMA(args) _Pragma(SPACES_STRINGIZE(args))
 
+// SPACES_CURRENT_FUNCTION - Expands to a string literal naming the current
+// function.
+#if defined(__PRETTY_FUNCTION__)
+  #define SPACES_CURRENT_FUNCTION __PRETTY_FUNCTION__
+#else
+  #define SPACES_CURRENT_FUNCTION __func__
+#endif
+
