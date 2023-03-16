@@ -14,7 +14,7 @@
 
 SPACES_BEGIN_NAMESPACE
 
-template <std::ptrdiff_t I, typename Tuple, typename T, typename F>
+template <index_type I, typename Tuple, typename T, typename F>
 auto tuple_reduce_impl(Tuple&& tuple, T&& init, F&& f)
 {
   if constexpr (I > 0) {
