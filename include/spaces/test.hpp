@@ -118,11 +118,7 @@ inline int test_report_errors()
   auto errors = test_errors_count();
 
   if (errors == 0)
-  {
-    SPACES_TEST_OSTREAM
-      << "No errors detected." << std::endl;
     return 0;
-  }
   else
   {
     SPACES_TEST_OSTREAM
