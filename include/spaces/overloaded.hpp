@@ -20,9 +20,9 @@
 SPACES_BEGIN_NAMESPACE
 
 // `overloaded(f0, f1, ...)` (where `f0`, `f1`, ... are lambdas or function
-// objects) produces a function object that dispatches `operator()` invocations
-// to `f0`, `f1`, ... by overload resolution, as if they were declared as
-// overloads of the same function.
+// objects) - Produces a function object that dispatches `operator()`
+// invocations to `f0`, `f1`, ... by overload resolution, as if they were
+// declared as overloads of the same function.
 template <typename... Ts>
 struct overloaded : Ts...
 {

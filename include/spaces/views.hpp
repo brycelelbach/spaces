@@ -45,7 +45,8 @@ overloaded(
 inline constexpr auto filter_o = [] <typename F> (F&& f)
 {
   return std::views::transform(
-    [&] <typename T> (T&& t) -> add_optional<T> {
+    [&] <typename T> (T&& t) -> add_optional<T>
+    {
       if constexpr (specialization_of<T, std::optional>) {
         if (t.has_value() && std::invoke((F&&)f, t.value())) return ((T&&)t).value();
         else return std::nullopt;
