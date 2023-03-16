@@ -9,6 +9,7 @@
 
 #include <spaces/config.hpp>
 #include <spaces/meta.hpp>
+#include <spaces/tuple.hpp>
 
 #include <type_traits>
 #include <functional>
@@ -39,12 +40,12 @@ using remove_optional = remove_optional_impl<T>::type;
 // in an `optional`. If `t` is an empty optional, `f` is not invoked and an
 // empty optional is returned.
 inline constexpr auto invoke_o =
-  [] <typename F, typename T> (F&& f, T&& t)
-  -> std::conditional_t<
-       std::same_as<std::invoke_result_t<F&&, remove_optional<T>>, void>,
-       std::nullopt_t,
-       add_optional<std::invoke_result_t<F&&, remove_optional<T>>>
-     >
+[] <typename F, typename T> (F&& f, T&& t)
+-> std::conditional_t<
+     std::same_as<std::invoke_result_t<F&&, remove_optional<T>>, void>,
+     std::nullopt_t,
+     add_optional<std::invoke_result_t<F&&, remove_optional<T>>>
+   >
 {
   if constexpr (std::same_as<std::invoke_result_t<F&&, remove_optional<T>>, void>) {
     // `f` returns `void`.
@@ -67,6 +68,18 @@ inline constexpr auto invoke_o =
       return std::invoke((F&&)f, (T&&)t);
     }
   }
+};
+
+inline constexpr auto apply_or_invoke_o =
+[] <typename F, typename T> (F&& f, T&& t)
+{
+  return invoke_o(
+    [&] <typename U> (U&& u)
+    {
+      return apply_or_invoke((F&&)f, (U&&)u);
+    }
+  , (T&&)t
+  );
 };
 
 SPACES_END_NAMESPACE

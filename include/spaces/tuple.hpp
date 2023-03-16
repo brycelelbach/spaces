@@ -8,11 +8,22 @@
 #pragma once
 
 #include <spaces/config.hpp>
+#include <spaces/overloaded.hpp>
+#include <spaces/meta.hpp>
 
 #include <functional>
 #include <tuple>
 
 SPACES_BEGIN_NAMESPACE
+
+inline constexpr auto apply_or_invoke =
+[] <typename F, typename T> (F&& f, T&& t)
+{
+  if constexpr (specialization_of<T, std::tuple>)
+    return std::apply((F&&)f, (T&&)t);
+  else
+    return std::invoke((F&&)f, (T&&)t);
+};
 
 template <index_type I, typename Tuple, typename T, typename F>
 auto tuple_reduce_impl(Tuple&& tuple, T&& init, F&& f)
