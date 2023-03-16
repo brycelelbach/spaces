@@ -1,3 +1,10 @@
+# Copyright (c) 2015-2017 Bryce Adelstein Lelbach
+# Copyright (c) 2017-2023 NVIDIA Corporation
+#
+# Distributed under the Apache License v2.0 with LLVM Exceptions.
+# See https://llvm.org/LICENSE.txt for license information.
+# SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+
 cmake_minimum_required(VERSION 3.25)
 
 project(spaces LANGUAGES CXX)
