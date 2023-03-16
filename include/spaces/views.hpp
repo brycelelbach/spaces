@@ -18,37 +18,57 @@ SPACES_BEGIN_NAMESPACE
 // `transform_o(rng, f)` or `rng | transform_o(f)` returns a range that, for
 // each element `e` of `rng`, contains a corresponding element that is:
 // * `nullopt` if `e` is an empty `optional`.
-// * An `optional` containing the result of invoking `f(*e)` if `e` is a
+// * An `optional` containing the result of `apply_or_invoke(f, *e)` if `e` is a
 //   non-empty `optional`.
-// * An `optional` containing the result of invoking `f(e)` if `e` isn't an
-//   `optional`.
+// * An `optional` containing the result of invoking `apply_or_invoke(f, e)` if
+//   `e` isn't an `optional`.
 inline constexpr auto transform_o =
 overloaded(
   [] <typename Range, typename F> (Range&& rng, F&& f)
   {
-    return std::views::transform((Range&&)rng, invoke_o((F&&)f));
+    return std::views::transform(
+      (Range&&)rng
+    , [f = (F&&)f] <typename T> (T&& t)
+      {
+        return apply_or_invoke_o(f, (T&&)t);
+      }
+    );
   },
   [] <typename F> (F&& f)
   {
-    return std::views::transform(invoke_o((F&&)f));
+    return std::views::transform(
+      [f = (F&&)f] <typename T> (T&& t)
+      {
+        return apply_or_invoke_o(f, (T&&)t);
+      }
+    );
   }
 );
 
-inline constexpr auto filter_o = [] <typename F> (F&& f)
-{
-  return std::views::transform(
-    [&] <typename T> (T&& t) -> add_optional<T>
-    {
-      if constexpr (specialization_of<T, std::optional>) {
-        if (t.has_value() && std::invoke((F&&)f, t.value())) return ((T&&)t).value();
-        else return std::nullopt;
-      } else {
-        if (std::invoke((F&&)f, t)) return (T&&)t;
+inline constexpr auto filter_o =
+overloaded(
+  [] <typename Range, typename F> (Range&& rng, F&& f)
+  {
+    return std::views::transform(
+      (Range&&)rng
+    , [f = (F&&)f] <typename T> (T&& t) -> add_optional<T>
+      {
+        if (apply_or_invoke(f, t)) return (T&&)t;
         else return std::nullopt;
       }
-    }
-  );
-};
+    );
+  }
+, [] <typename F> (F&& f)
+  {
+    return std::views::transform(
+      [f = (F&&)f] <typename T> (T&& t) -> add_optional<T>
+      {
+        if (apply_or_invoke(f, t)) return (T&&)t;
+        else return std::nullopt;
+      }
+    );
+  }
+);
 
 SPACES_END_NAMESPACE
 
