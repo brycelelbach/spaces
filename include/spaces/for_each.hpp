@@ -8,8 +8,9 @@
 #pragma once
 
 #include <spaces/config.hpp>
-#include <spaces/mdrange.hpp>
 #include <spaces/optimization_hints.hpp>
+#include <spaces/mdrange.hpp>
+#include <spaces/optional.hpp>
 
 #include <type_traits>
 #include <utility>

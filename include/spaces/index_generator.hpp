@@ -11,6 +11,8 @@
 
 #if !(defined(__INTEL_LLVM_COMPILER) || defined(__INTEL_COMPILER))
 
+#include <spaces/optimization_hints.hpp>
+
 #include <array>
 #include <coroutine>
 
