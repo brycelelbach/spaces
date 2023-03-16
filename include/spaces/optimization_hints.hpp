@@ -31,17 +31,17 @@
 // so this is the best we can do. It is not clear if this overrides GCC's cost
 // modeling.
 #if   defined(__INTEL_COMPILER)
-    #define SPACES_DEMAND_VECTORIZATION                                       \
-        SPACES_PRAGMA(simd)                                                   \
-        /**/
+  #define SPACES_DEMAND_VECTORIZATION                                         \
+    SPACES_PRAGMA(simd)                                                       \
+    /**/
 #elif defined(__clang__)
-    #define SPACES_DEMAND_VECTORIZATION                                       \
-        SPACES_PRAGMA(clang loop vectorize(enable) interleave(enable))        \
-        /**/
+  #define SPACES_DEMAND_VECTORIZATION                                         \
+    SPACES_PRAGMA(clang loop vectorize(enable) interleave(enable))            \
+    /**/
 #else
-    #define SPACES_DEMAND_VECTORIZATION                                       \
-        SPACES_PRAGMA(GCC ivdep)                                              \
-        /**/
+  #define SPACES_DEMAND_VECTORIZATION                                         \
+    SPACES_PRAGMA(GCC ivdep)                                                  \
+    /**/
 #endif
 
 // SPACES_PREVENT_VECTORIZATION - Tell the compiler to not vectorize a loop.
@@ -51,13 +51,13 @@
 //
 // NOTE: Unlike Clang and Intel, GCC doesn't seem to have a way to do this.
 #if   defined(__INTEL_COMPILER)
-    #define SPACES_PREVENT_VECTORIZATION                                      \
-        SPACES_PRAGMA(novector)                                               \
-        /**/
+  #define SPACES_PREVENT_VECTORIZATION                                        \
+    SPACES_PRAGMA(novector)                                                   \
+    /**/
 #elif defined(__clang__)
-    #define SPACES_PREVENT_VECTORIZATION                                      \
-        SPACES_PRAGMA(clang loop vectorize(disable) interleave(disable))      \
-        /**/
+  #define SPACES_PREVENT_VECTORIZATION                                        \
+    SPACES_PRAGMA(clang loop vectorize(disable) interleave(disable))          \
+    /**/
 #else
     #define SPACES_PREVENT_VECTORIZATION
 #endif
@@ -94,39 +94,39 @@
 // __builtin_assume_aligned() is an assumption about the return value of the
 // intrinsic.
 #if   defined(__INTEL_COMPILER)
-    #define SPACES_ASSUME(expr)                                               \
-        SPACES_ASSERT_ASSUMPTION(expr)                                        \
-        __assume(expr)                                                        \
-        /**/
-    #define SPACES_ASSUME_ALIGNED(ptr, align)                                 \
-        SPACES_ASSERT_ASSUMPTION(0 == (std::uintptr_t(ptr) % alignment))      \
-        __assume_aligned(ptr, align)                                          \
-        /**/
+  #define SPACES_ASSUME(expr)                                                 \
+    SPACES_ASSERT_ASSUMPTION(expr)                                            \
+    __assume(expr)                                                            \
+    /**/
+  #define SPACES_ASSUME_ALIGNED(ptr, align)                                   \
+    SPACES_ASSERT_ASSUMPTION(0 == (std::uintptr_t(ptr) % alignment))          \
+    __assume_aligned(ptr, align)                                              \
+    /**/
 #elif defined(__clang__)
-    #define SPACES_ASSUME(expr)                                               \
-        SPACES_ASSERT_ASSUMPTION(expr)                                        \
-        __builtin_assume(expr)                                                \
-        /**/
-    #define SPACES_ASSUME_ALIGNED(ptr, align)                                 \
-        SPACES_ASSERT_ASSUMPTION(0 == (std::uintptr_t(ptr) % alignment))      \
-        {                                                                     \
-            ptr = reinterpret_cast<decltype(ptr)>(                            \
-                __builtin_assume_aligned(ptr, align)                          \
-            );                                                                \
-        }                                                                     \
-        /**/
+  #define SPACES_ASSUME(expr)                                                 \
+    SPACES_ASSERT_ASSUMPTION(expr)                                            \
+    __builtin_assume(expr)                                                    \
+    /**/
+  #define SPACES_ASSUME_ALIGNED(ptr, align)                                   \
+    SPACES_ASSERT_ASSUMPTION(0 == (std::uintptr_t(ptr) % alignment))          \
+    {                                                                         \
+        ptr = reinterpret_cast<decltype(ptr)>(                                \
+            __builtin_assume_aligned(ptr, align)                              \
+        );                                                                    \
+    }                                                                         \
+    /**/
 #else // GCC
-    #define SPACES_ASSUME(expr)                                               \
-        SPACES_ASSERT_ASSUMPTION(expr)                                        \
-        do { if (!(expr)) __builtin_unreachable(); } while (0)                \
-        /**/
-    #define SPACES_ASSUME_ALIGNED(ptr, align)                                 \
-        SPACES_ASSERT_ASSUMPTION(0 == (std::uintptr_t(ptr) % alignment))      \
-        {                                                                     \
-            ptr = reinterpret_cast<decltype(ptr)>(                            \
-                __builtin_assume_aligned(ptr, align)                          \
-            );                                                                \
-        }                                                                     \
-        /**/
+  #define SPACES_ASSUME(expr)                                                 \
+    SPACES_ASSERT_ASSUMPTION(expr)                                            \
+    do { if (!(expr)) __builtin_unreachable(); } while (0)                    \
+    /**/
+  #define SPACES_ASSUME_ALIGNED(ptr, align)                                   \
+    SPACES_ASSERT_ASSUMPTION(0 == (std::uintptr_t(ptr) % alignment))          \
+    {                                                                         \
+      ptr = reinterpret_cast<decltype(ptr)>(                                  \
+        __builtin_assume_aligned(ptr, align)                                  \
+      );                                                                      \
+    }                                                                         \
+    /**/
 #endif
 
