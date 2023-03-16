@@ -27,9 +27,25 @@ add_test(
 )
 target_link_libraries(test.performance.memset_2d PRIVATE spaces)
 
+set(SPACES_TEST_PERFORMANCE_MEMSET_DIAGONAL_2D_SOURCES
+  memset_diagonal_2d_reference.cpp
+  memset_diagonal_2d_for_each_filter.cpp
+  memset_diagonal_2d_for_each_filter_o.cpp
+)
+add_executable(test.performance.memset_diagonal_2d
+  memset_diagonal_2d.cpp
+  ${SPACES_TEST_PERFORMANCE_MEMSET_DIAGONAL_2D_SOURCES}
+)
+add_test(
+  NAME test.performance.memset_diagonal_2d
+  COMMAND test.performance.memset_diagonal_2d
+)
+target_link_libraries(test.performance.memset_diagonal_2d PRIVATE spaces)
+
 if(CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
   set(SPACES_OPTIMIZATION_REPORT_SOURCES
     ${SPACES_TEST_PERFORMANCE_MEMSET_2D_SOURCES}
+    ${SPACES_TEST_PERFORMANCE_MEMSET_DIAGONAL_2D_SOURCES}
   )
   foreach(SPACES_SOURCE ${SPACES_OPTIMIZATION_REPORT_SOURCES})
     get_filename_component(SPACES_TARGET ${SPACES_SOURCE} NAME_WLE)
