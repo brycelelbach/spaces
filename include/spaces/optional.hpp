@@ -42,7 +42,7 @@ struct remove_optional_impl<std::optional<T>> { using type = T; };
 template <typename T>
 using remove_optional = remove_optional_impl<T>::type;
 
-// `invoke_o(f, t)`: Invokes `f` with `t` (if `t` isn't an `optional`) or
+// `invoke_o(f, t)` - Invokes `f` with `t` (if `t` isn't an `optional`) or
 // `t.value()` (if `t` is an `optional` and non-empty), and wraps the result
 // in an `optional`. If `t` is an empty optional, `f` is not invoked and an
 // empty optional is returned.
@@ -55,17 +55,23 @@ inline constexpr auto invoke_o =
      >
 {
   if constexpr (std::same_as<std::invoke_result_t<F&&, remove_optional<T>>, void>) {
+    // `f` returns `void`.
     if constexpr (specialization_of<T, std::optional>) {
+      // `t` is an `optional`, so we need to invoke `f` only if it's got a value.
       if (t.has_value()) std::invoke((F&&)f, ((T&&)t).value());
     } else {
+      // `t` is a value, so always invoke `f`.
       std::invoke((F&&)f, (T&&)t);
     }
     return std::nullopt;
   } else {
+    // `F` returns non-`void`.
     if constexpr (specialization_of<T, std::optional>) {
+      // `t` is an `optional`, so we need to invoke `f` only if it's got a value.
       if (t.has_value()) return std::invoke((F&&)f, ((T&&)t).value());
       else return std::nullopt;
     } else {
+      // `t` is a value, so always invoke `f`.
       return std::invoke((F&&)f, (T&&)t);
     }
   }
