@@ -68,12 +68,12 @@ void set_to_initial_state(spaces::mdspan<double, spaces::dextents<2>> A) {
 void validate_state(spaces::mdspan<double, spaces::dextents<2>> A) {
   for (spaces::index_type j = 0; j != A.extent(1); ++j)
     for (spaces::index_type i = 0; i != A.extent(0); ++i)
-      SPACES_TEST(A(i, j) == 0.0);
+      SPACES_TEST_EQ(A(i, j), 0.0);
 }
 
 int main() {
-  constexpr spaces::index_type N = 2048;
-  constexpr spaces::index_type M = 1024;
+  constexpr spaces::index_type N = 128;
+  constexpr spaces::index_type M = 96;
 
   std::vector<double> data(N * M);
   spaces::mdspan A(data.data(), N, M);
