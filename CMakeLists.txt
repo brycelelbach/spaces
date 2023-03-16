@@ -60,8 +60,11 @@ if (CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
   add_library(md_iteration_comparison_optimization_report STATIC md_iteration_comparison.cpp)
   target_link_libraries(md_iteration_comparison_optimization_report PRIVATE spaces spaces_optimization_report)
   set(SPACES_THIS_BINARY_DIR ${CMAKE_CURRENT_BINARY_DIR}/CMakeFiles/md_iteration_comparison_optimization_report.dir)
-  configure_file(${CMAKE_CURRENT_SOURCE_DIR}/redirect_compiler_output.bash.in
-                 ${SPACES_THIS_BINARY_DIR}/redirect_compiler_output.bash)
+  file(WRITE ${SPACES_THIS_BINARY_DIR}/redirect_compiler_output.bash
+       "#! /usr/bin/env bash\n"
+       "$@ > ${SPACES_THIS_BINARY_DIR}/compiler_output 2>&1\n")
+  file(CHMOD ${SPACES_THIS_BINARY_DIR}/redirect_compiler_output.bash
+       FILE_PERMISSIONS OWNER_EXECUTE OWNER_WRITE OWNER_READ)
   set_target_properties(md_iteration_comparison_optimization_report PROPERTIES
     CXX_COMPILER_LAUNCHER ${SPACES_THIS_BINARY_DIR}/redirect_compiler_output.bash)
 endif()
