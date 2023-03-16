@@ -21,7 +21,7 @@
 
 SPACES_BEGIN_NAMESPACE
 
-using index_type = std::ptrdiff_t;
+using index_type = std::size_t;
 
 SPACES_END_NAMESPACE
 

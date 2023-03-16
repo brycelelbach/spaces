@@ -48,7 +48,7 @@ public:
     {
       using iterator_category = std::forward_iterator_tag;
       using value_type = std::tuple<index_type, Outer...>;
-      using difference_type = index_type;
+      using difference_type = std::ptrdiff_t;
 
     private:
       value_type idx;
@@ -110,7 +110,7 @@ public:
   public:
     template <typename OuterTuple>
     constexpr range(index_type ext, OuterTuple&& outer)
-      : first(0, outer), last(ext, outer)
+      : first(index_type(0), outer), last(ext, outer)
     {}
 
     constexpr range() = default;
