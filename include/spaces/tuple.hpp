@@ -17,8 +17,8 @@
 
 #include <spaces/config.hpp>
 
-#include <tuple>
 #include <functional>
+#include <tuple>
 
 SPACES_BEGIN_NAMESPACE
 
@@ -29,7 +29,7 @@ auto tuple_reduce_impl(Tuple&& tuple, T&& init, F&& f)
     return std::invoke(
       f
     , std::get<I>(tuple)
-    , tuple_reduce_impl<I - 1>((Tuple&&)tuple, (T&&)init, (F&&)op)
+    , tuple_reduce_impl<I - 1>((Tuple&&)tuple, (T&&)init, (F&&)f)
     );
   } else {
     return std::invoke(
