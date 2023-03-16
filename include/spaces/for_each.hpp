@@ -11,11 +11,11 @@
 #include <spaces/optimization_hints.hpp>
 #include <spaces/mdrange.hpp>
 #include <spaces/optional.hpp>
+#include <spaces/tuple.hpp>
 
 #include <type_traits>
 #include <utility>
 #include <functional>
-#include <tuple>
 
 SPACES_BEGIN_NAMESPACE
 
@@ -26,8 +26,8 @@ constexpr void for_each_impl(Space&& space, F&& f, OuterTuple&& outer)
     SPACES_DEMAND_VECTORIZATION
     for (auto&& e: mdrange<I>(space, (OuterTuple&&)outer)) {
       invoke_o(
-        [&] (auto&& t) {
-          for_each_impl<I - 1>((Space&&)space, f, std::forward<decltype(t)>(t));
+        [&] <typename T> (T&& t) {
+          for_each_impl<I - 1>((Space&&)space, f, (T&&)t);
         }
       , std::forward<decltype(e)>(e)
       );
@@ -35,12 +35,7 @@ constexpr void for_each_impl(Space&& space, F&& f, OuterTuple&& outer)
   } else {
     SPACES_DEMAND_VECTORIZATION
     for (auto&& e: mdrange<I>((Space&&)space, (OuterTuple&&)outer)) {
-      invoke_o(
-        [&] (auto&& t) {
-          std::apply((F&&)f, std::forward<decltype(t)>(t));
-        }
-      , std::forward<decltype(e)>(e)
-      );
+      apply_or_invoke_o((F&&)f, std::forward<decltype(e)>(e));
     }
   }
 }
