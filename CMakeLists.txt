@@ -9,6 +9,8 @@ cmake_minimum_required(VERSION 3.25)
 
 project(spaces LANGUAGES CXX)
 
+enable_testing()
+
 if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
   message(STATUS "Setting build type to 'Release' as none was specified.")
   set(CMAKE_BUILD_TYPE "Release" CACHE STRING "Choose the type of build." FORCE)
@@ -60,19 +62,33 @@ target_compile_options(spaces_optimization_report INTERFACE
   >
 )
 
-add_executable(md_iteration_comparison md_iteration_comparison.cpp)
-target_link_libraries(md_iteration_comparison PRIVATE spaces)
+add_executable(test.performance.memset_2d
+  test/performance/memset_2d.cpp
+  test/performance/memset_2d_reference.cpp
+)
+add_test(
+  NAME test.performance.memset_2d
+  COMMAND test.performance.memset_2d
+)
+target_link_libraries(test.performance.memset_2d PRIVATE spaces)
 
-if (CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
-  add_library(md_iteration_comparison_optimization_report STATIC md_iteration_comparison.cpp)
-  target_link_libraries(md_iteration_comparison_optimization_report PRIVATE spaces spaces_optimization_report)
-  set(SPACES_THIS_BINARY_DIR ${CMAKE_CURRENT_BINARY_DIR}/CMakeFiles/md_iteration_comparison_optimization_report.dir)
-  file(WRITE ${SPACES_THIS_BINARY_DIR}/redirect_compiler_output.bash
-       "#! /usr/bin/env bash\n"
-       "$@ > ${SPACES_THIS_BINARY_DIR}/compiler_output 2>&1\n")
-  file(CHMOD ${SPACES_THIS_BINARY_DIR}/redirect_compiler_output.bash
-       FILE_PERMISSIONS OWNER_EXECUTE OWNER_WRITE OWNER_READ)
-  set_target_properties(md_iteration_comparison_optimization_report PROPERTIES
-    CXX_COMPILER_LAUNCHER ${SPACES_THIS_BINARY_DIR}/redirect_compiler_output.bash)
+if(CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
+  set(SPACES_OPTIMIZATION_REPORT_TARGETS
+    memset_2d_reference
+  )
+  foreach(SPACES_TARGET ${SPACES_OPTIMIZATION_REPORT_TARGETS})
+    add_library(${SPACES_TARGET}_optimization_report STATIC test/performance/${SPACES_TARGET}.cpp)
+    target_link_libraries(${SPACES_TARGET}_optimization_report
+      PRIVATE spaces spaces_optimization_report)
+    set(SPACES_THIS_BINARY_DIR
+      ${CMAKE_CURRENT_BINARY_DIR}/CMakeFiles/${SPACES_TARGET}_optimization_report.dir)
+    file(WRITE ${SPACES_THIS_BINARY_DIR}/redirect_compiler_output.bash
+      "#! /usr/bin/env bash\n"
+      "$@ > ${SPACES_THIS_BINARY_DIR}/compiler_output 2>&1\n")
+    file(CHMOD ${SPACES_THIS_BINARY_DIR}/redirect_compiler_output.bash
+      FILE_PERMISSIONS OWNER_EXECUTE OWNER_WRITE OWNER_READ)
+    set_target_properties(${SPACES_TARGET}_optimization_report PROPERTIES
+      CXX_COMPILER_LAUNCHER ${SPACES_THIS_BINARY_DIR}/redirect_compiler_output.bash)
+  endforeach()
 endif()
 
