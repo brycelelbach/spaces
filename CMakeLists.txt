@@ -37,7 +37,7 @@ target_compile_options(spaces INTERFACE
   $<$<AND:$<CONFIG:Release>,$<CXX_COMPILER_ID:Clang,AppleClang,GNU,Intel>>:
     -g0 -DNDEBUG
     -fno-exceptions -fno-rtti
-    -fomit-frame-pointer -fno-asynchronous-unwind-tables -fno-unwind-tables
+    -fomit-frame-pointer -fno-unwind-tables -fno-asynchronous-unwind-tables
   >
   $<$<CXX_COMPILER_ID:Clang,AppleClang,GNU,Intel,NVHPC>:
     -Wall
@@ -58,9 +58,9 @@ add_library(spaces_optimization_report INTERFACE)
 
 target_compile_options(spaces_optimization_report INTERFACE
   $<$<CXX_COMPILER_ID:Clang,AppleClang,Intel>:
-    -Rpass=loop-vectorize
-    -Rpass-missed=loop-vectorize
-    -Rpass-analysis=loop-vectorize
+    -Rpass=loop
+    -Rpass-missed=loop
+    -Rpass-analysis=loop
     -fsave-optimization-record
   >
 )
