@@ -24,8 +24,9 @@ void memset_plane_3d_reference(
   for (spaces::index_type k = 0; k != O; ++k)
     SPACES_DEMAND_VECTORIZATION
     for (spaces::index_type j = 0; j != M; ++j)
-      SPACES_DEMAND_VECTORIZATION
-      for (spaces::index_type i = 0; i != N; ++i)
-        if (i == j) A[i + j * N + k * N * M] = 0.0;
+      if (j == k)
+        SPACES_DEMAND_VECTORIZATION
+        for (spaces::index_type i = 0; i != N; ++i)
+          A[i + j * N + k * N * M] = 0.0;
 }
 

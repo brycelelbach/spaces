@@ -18,7 +18,7 @@ void memset_plane_3d_for_each_filter(
 {
   spaces::for_each(
     spaces::cursor<3>(A.extent(0), A.extent(1), A.extent(2))
-  | std::views::filter([] (auto idx) { auto [i, j, k] = idx; return i == j; })
+  | std::views::filter([] (auto idx) { auto [i, j, k] = idx; return j == k; })
   , [=] (auto i, auto j, auto k) { A(i, j, k) = 0.0; }
   );
 }

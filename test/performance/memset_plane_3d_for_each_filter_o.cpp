@@ -8,6 +8,7 @@
 #include <spaces/config.hpp>
 #include <spaces/mdspan.hpp>
 #include <spaces/cursor.hpp>
+#include <spaces/on_extent.hpp>
 #include <spaces/for_each.hpp>
 #include <spaces/views.hpp>
 
@@ -17,7 +18,7 @@ void memset_plane_3d_for_each_filter_o(
 {
   spaces::for_each(
     spaces::cursor<3>(A.extent(0), A.extent(1), A.extent(2))
-  | spaces::filter_o([] (auto i, auto j, auto k) { return i == j; })
+  | spaces::on_extent<1>(spaces::filter_o([] (auto i, auto j) { return i == j; }))
   , [=] (auto i, auto j, auto k) { A(i, j, k) = 0.0; }
   );
 }

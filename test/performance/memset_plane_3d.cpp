@@ -45,7 +45,7 @@ void validate_state(
   for (spaces::index_type k = 0; k != A.extent(2); ++k)
     for (spaces::index_type j = 0; j != A.extent(1); ++j)
       for (spaces::index_type i = 0; i != A.extent(0); ++i) {
-        if (i == j) SPACES_TEST_EQ(A(i, j, k), 0.0);
+        if (j == k) SPACES_TEST_EQ(A(i, j, k), 0.0);
         else SPACES_TEST_EQ(A(i, j, k), A.mapping()(i, j, k));
       }
 }
