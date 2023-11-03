@@ -49,8 +49,10 @@ target_compile_options(spaces INTERFACE
   >
   $<$<CXX_COMPILER_ID:Clang,AppleClang,GNU,Intel>:
     -ftemplate-backtrace-limit=0
-    -ferror-limit=0
     -march=${SPACES_MARCH}
+  >
+  $<$<CXX_COMPILER_ID:Clang,AppleClang>:
+    -ferror-limit=0
   >
 )
 
